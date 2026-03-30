@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-AI | تسجيل الدخول</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="auth-card">
+            <h2>MS-AI</h2>
+            <div class="message" id="auth-message"></div>
+
+            <form id="login-form">
+                <h3>تسجيل الدخول</h3>
+                <input type="text" id="login-username" placeholder="اسم المستخدم" required>
+                <input type="password" id="login-password" placeholder="كلمة المرور" required>
+                <button type="submit" id="login-button">دخول</button>
+                <p>
+                    <a href="#" id="show-signup">ليس لديك حساب؟ سجل الآن</a>
+                </p>
+            </form>
+
+            <form id="signup-form" style="display: none;">
+                <h3>تسجيل حساب جديد</h3>
+                <input type="text" id="signup-username" placeholder="اسم المستخدم" required>
+                <input type="password" id="signup-password" placeholder="كلمة المرور" required>
+                <input type="text" id="signup-invite-code" placeholder="رمز الدعوة (Invite Code)" required>
+                <button type="submit" id="signup-button">تسجيل</button>
+                <p>
+                    <a href="#" id="show-login">لديك حساب؟ سجل الدخول</a>
+                </p>
+            </form>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

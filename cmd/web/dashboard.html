@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-AI | مكتبة المانجا</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* أنماط خاصة بصفحة المانجا */
+        .manga-library {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .manga-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .manga-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .manga-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+
+        .manga-cover {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+            overflow: hidden;
+        }
+
+        .manga-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .manga-info {
+            padding: 15px;
+        }
+
+        .manga-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .manga-description {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .manga-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            color: #999;
+        }
+
+        .nav-bar {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-bar h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-links a, .nav-links button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .nav-links a:hover, .nav-links button:hover {
+            background: #0056b3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .error {
+            text-align: center;
+            padding: 50px;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="manga-library">
+            <div class="nav-bar">
+                <h2>📚 مكتبة المانجا</h2>
+                <div class="nav-links">
+                    <a href="control.html">لوحة التحكم</a>
+                    <button id="logout-button">تسجيل الخروج</button>
+                </div>
+            </div>
+
+            <div id="manga-container">
+                <div class="loading">جاري تحميل المانجا...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+
+    <script>
+        // 🎯 بوابة الأمان
+        checkAuthentication();
+
+        // تحميل المانجا
+        async function loadManga() {
+            try {
+                const response = await fetch('/api/mangas', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + getAccessToken()
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('فشل في تحميل المانجا');
+                }
+
+                const data = await response.json();
+                displayManga(data.data || []);
+            } catch (error) {
+                console.error('Error loading manga:', error);
+                document.getElementById('manga-container').innerHTML =
+                    '<div class="error">حدث خطأ في تحميل المانجا. يرجى المحاولة لاحقاً.</div>';
+            }
+        }
+
+        function displayManga(mangaList) {
+            const container = document.getElementById('manga-container');
+
+            if (mangaList.length === 0) {
+                container.innerHTML = '<div class="loading">لا توجد مانجا متاحة حالياً.</div>';
+                return;
+            }
+
+            const mangaGrid = document.createElement('div');
+            mangaGrid.className = 'manga-grid';
+
+            mangaList.forEach(manga => {
+                const card = document.createElement('div');
+                card.className = 'manga-card';
+                card.onclick = () => viewManga(manga.id);
+
+                const coverContent = manga.cover_image
+                    ? `<img src="${manga.cover_image}" alt="${manga.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                    : '';
+                const fallbackContent = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5em; font-weight: bold;">${manga.title.charAt(0).toUpperCase()}</div>`;
+
+                card.innerHTML = `
+                    <div class="manga-cover">
+                        ${coverContent}
+                        ${fallbackContent}
+                    </div>
+                    <div class="manga-info">
+                        <div class="manga-title">${manga.title}</div>
+                        <div class="manga-description">${manga.description || 'لا يوجد وصف'}</div>
+                        <div class="manga-meta">
+                            <span>الحالة: ${manga.is_published ? 'منشور' : 'مسودة'}</span>
+                            <span>الفصول: ${manga.chapters ? manga.chapters.length : 0}</span>
+                        </div>
+                    </div>
+                `;
+
+                mangaGrid.appendChild(card);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(mangaGrid);
+        }
+
+        function viewManga(mangaId) {
+            window.location.href = `manga-details.html?id=${mangaId}`;
+        }
+
+        // تحميل المانجا عند تحميل الصفحة
+        window.onload = function() {
+            setupAuthListeners();
+            loadManga();
+        };
+    </script>
+</body>
+</html>
