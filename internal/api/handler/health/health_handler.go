@@ -6,9 +6,7 @@ import (
 	"time"
 
 	"github.com/835-droid/ms-ai-backend/internal/data/mongo"
-	datamongo "github.com/835-droid/ms-ai-backend/internal/data/mongo"
 	"github.com/835-droid/ms-ai-backend/internal/data/postgres"
-	datapostgres "github.com/835-droid/ms-ai-backend/internal/data/postgres"
 	"github.com/835-droid/ms-ai-backend/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -20,18 +18,17 @@ type HealthChecker interface {
 }
 
 type Handler struct {
-	mongoStore    *datamongo.MongoStore
-	postgresStore *datapostgres.PostgresStore
+	mongoStore    *mongo.MongoStore
+	postgresStore *postgres.PostgresStore
 	lastCheck     time.Time
 	isReady       bool
 }
 
-// NewHealthHandler ينشئ نسخة جديدة من الـ HealthHandler مع تمرير الاتصالات اللازمة
-func NewHealthHandler(m *mongo.MongoStore, p *postgres.PostgresStore, r *redis.Client) *HealthHandler {
-	return &HealthHandler{
+// NewHandler creates a new health handler
+func NewHandler(m *mongo.MongoStore, p *postgres.PostgresStore) *Handler {
+	return &Handler{
 		mongoStore:    m,
 		postgresStore: p,
-		redisClient:   r,
 		isReady:       false,
 	}
 }
@@ -127,80 +124,4 @@ func (h *Handler) DebugDBCheck(c *gin.Context) {
 	} else {
 		response.ErrorResp(c, http.StatusInternalServerError, "no database configured")
 	}
-}
-
-// NewHealthHandler ينشئ نسخة جديدة من الـ HealthHandler مع تمرير الاتصالات اللازمة
-func NewHealthHandler(m *mongo.MongoStore, p *postgres.PostgresStore, r *redis.Client) *HealthHandler {
-	return &HealthHandler{
-		mongoStore:    m,
-		postgresStore: p,
-		redisClient:   r,
-		isReady:       false,
-	}
-}
-
-// Liveness فحص بسيط للتأكد من أن تطبيق Go يعمل (Liveness Probe)
-func (h *HealthHandler) Liveness(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "UP"})
-}
-
-// ReadinessCheck يقوم بفحص عميق لجميع الاتصالات (Readiness Probe)
-// يدعم الوضع الهجين بفحص كل القواعد النشطة
-func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
-	ctx := c.Request.Context()
-	var errs []error
-
-	// 1. فحص MongoDB إذا كان مفعلاً
-	if h.mongoStore != nil {
-		if err := h.mongoStore.Healthy(ctx); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	// 2. فحص PostgreSQL إذا كان مفعلاً
-	if h.postgresStore != nil {
-		if err := h.postgresStore.Healthy(ctx); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	// 3. فحص Redis إذا كان مفعلاً (التطوير الإضافي الذي طلبته)
-	if h.redisClient != nil {
-		if err := h.redisClient.Ping(ctx).Err(); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	// تحديث حالة الجاهزية بناءً على وجود أخطاء من عدمه
-	h.mu.Lock()
-	h.isReady = len(errs) == 0
-	h.mu.Unlock()
-
-	// إذا كانت هناك أخطاء، نرجع حالة 503 مع قائمة الأخطاء
-	if !h.isReady {
-		c.JSON(http.StatusServiceUnavailable, gin.H{
-			"status": "DISCONNECTED",
-			"errors": formatErrors(errs),
-		})
-		return
-	}
-
-	// في حالة النجاح
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"status": "READY",
-		"services": gin.H{
-			"mongo":    h.mongoStore != nil,
-			"postgres": h.postgresStore != nil,
-			"redis":    h.redisClient != nil,
-		},
-	})
-}
-
-// formatErrors دالة مساعدة لتحويل الأخطاء إلى نصوص مفهومة
-func formatErrors(errs []error) []string {
-	var s []string
-	for _, e := range errs {
-		s = append(s, e.Error())
-	}
-	return s
 }

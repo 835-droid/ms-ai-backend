@@ -39,6 +39,7 @@ func Setup(
 		mangarouter.SetupMangaRoutes(r, mangaHandler, mangaChapterHandler, cfg)
 	}
 
+	r.GET("/health", healthHandler.LivenessCheck)
 	r.GET("/livez", healthHandler.LivenessCheck)
 	r.GET("/readyz", healthHandler.ReadinessCheck)
 	r.GET("/debug/db", healthHandler.DebugDBCheck)
