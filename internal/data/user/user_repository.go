@@ -1,18 +1,15 @@
-// internal/data/user_repository.go
+// internal/data/user/user_repository.go
 package user
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
 
 	coreAdmin "github.com/835-droid/ms-ai-backend/internal/core/admin"
 	core "github.com/835-droid/ms-ai-backend/internal/core/common"
 	coreUser "github.com/835-droid/ms-ai-backend/internal/core/user"
-
-	// تم التصحيح: إضافة استيراد حزمة mongo
 	mongoData "github.com/835-droid/ms-ai-backend/internal/data/mongo"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,14 +20,9 @@ import (
 
 // MongoUserRepository implements core.UserRepository backed by MongoDB.
 type MongoUserRepository struct {
-	// تم التصحيح: استخدام النوع المصدر من الحزمة
-	store       *mongoData.MongoStore // كان: *MongoStore
+	store       *mongoData.MongoStore
 	usersColl   *mongo.Collection
 	invitesColl *mongo.Collection
-}
-type Counter struct {
-	ID    string `bson:"_id"` // اسم العداد مثلا "user_id_counter"
-	Value int    `bson:"seq"` // القيمة الحالية
 }
 
 // ensureInitialized validates that the repository and required collections are available
@@ -41,7 +33,7 @@ func (r *MongoUserRepository) ensureInitialized() error {
 	return nil
 }
 
-// تم التصحيح: استخدام النوع المصدر في دالة الإنشاء
+// NewMongoUserRepository creates a new repository instance
 func NewMongoUserRepository(s *mongoData.MongoStore) *MongoUserRepository {
 	return &MongoUserRepository{
 		store:       s,
@@ -50,24 +42,34 @@ func NewMongoUserRepository(s *mongoData.MongoStore) *MongoUserRepository {
 	}
 }
 
-func (r *MongoUserRepository) CreateUser(ctx context.Context, user *coreUser.User) error {
+// Create creates a new user and its associated details in a transaction.
+func (r *MongoUserRepository) Create(ctx context.Context, u *coreUser.User, details *coreUser.UserDetails) error {
 	if err := r.ensureInitialized(); err != nil {
 		return err
 	}
+
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "users", "write")
 	defer cancel()
 
 	now := time.Now()
-	user.CreatedAt = now
-	user.UpdatedAt = now
-	user.IsActive = true
-	if user.Roles == nil {
-		user.Roles = []string{"user"}
+	u.CreatedAt = now
+	u.UpdatedAt = now
+	u.IsActive = true
+	if u.Roles == nil {
+		u.Roles = []string{"user"}
 	}
 
+	// Copy relevant fields to details
+	details.Roles = u.Roles
+	details.IsActive = u.IsActive
+	details.CreatedAt = now
+	details.UpdatedAt = now
+	details.UUID = u.UUID
+	details.UserID = u.UserID
+
 	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		// Check if username exists
-		count, err := r.usersColl.CountDocuments(sessCtx, bson.M{"username": user.Username})
+		// Check if username already exists
+		count, err := r.usersColl.CountDocuments(sessCtx, bson.M{"username": u.Username})
 		if err != nil {
 			return fmt.Errorf("check username: %w", err)
 		}
@@ -75,29 +77,36 @@ func (r *MongoUserRepository) CreateUser(ctx context.Context, user *coreUser.Use
 			return core.ErrUserExists
 		}
 
-		// Insert the user
-		res, err := r.usersColl.InsertOne(sessCtx, user)
+		// Insert user
+		res, err := r.usersColl.InsertOne(sessCtx, u)
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
 				return core.ErrUserExists
 			}
 			return fmt.Errorf("insert user: %w", err)
 		}
-		user.ID = res.InsertedID.(primitive.ObjectID)
+		u.ID = res.InsertedID.(primitive.ObjectID)
+
+		// Insert user details
+		detailsColl := r.usersColl.Database().Collection("user_details")
+		if _, err := detailsColl.InsertOne(sessCtx, details); err != nil {
+			return fmt.Errorf("insert user details: %w", err)
+		}
+
 		return nil
 	}, nil)
 
 	if err != nil {
 		r.store.Log.Error("create user failed", map[string]interface{}{
-			"username": user.Username,
+			"username": u.Username,
 			"error":    err.Error(),
 		})
 		return err
 	}
 
 	r.store.Log.Info("user created", map[string]interface{}{
-		"username": user.Username,
-		"id":       user.ID.Hex(),
+		"username": u.Username,
+		"id":       u.ID.Hex(),
 	})
 	return nil
 }
@@ -119,7 +128,6 @@ func (r *MongoUserRepository) GetUserByID(ctx context.Context, id primitive.Obje
 		}
 		return nil, fmt.Errorf("find user by id: %w", err)
 	}
-
 	return &user, nil
 }
 
@@ -130,20 +138,11 @@ func (r *MongoUserRepository) FindByUsername(ctx context.Context, username strin
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "users", "read")
 	defer cancel()
 
-	// Perform case-insensitive match to avoid login issues due to character casing.
-	// We normalize the username in service layer, but existing DB values may differ.
-	escaped := regexp.QuoteMeta(username)
 	filter := bson.M{
-		"$and": []bson.M{
-			{
-				"username": bson.M{"$regex": fmt.Sprintf("^%s$", escaped), "$options": "i"},
-			},
-			{
-				"$or": []bson.M{
-					{"is_active": true},
-					{"is_active": bson.M{"$exists": false}},
-				},
-			},
+		"username": username,
+		"$or": []bson.M{
+			{"is_active": true},
+			{"is_active": bson.M{"$exists": false}},
 		},
 	}
 
@@ -155,7 +154,6 @@ func (r *MongoUserRepository) FindByUsername(ctx context.Context, username strin
 		}
 		return nil, fmt.Errorf("find user by username: %w", err)
 	}
-
 	return &user, nil
 }
 
@@ -174,16 +172,13 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, user *coreUser.Use
 	user.UpdatedAt = time.Now()
 
 	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		// Replace user atomically; filter includes is_active so absent/inactive users are not matched.
 		result, err := r.usersColl.ReplaceOne(sessCtx, bson.M{"_id": user.ID, "is_active": true}, user)
 		if err != nil {
 			return fmt.Errorf("update user: %w", err)
 		}
-		// MatchedCount==0 indicates the document was not found (absent or inactive).
 		if result.MatchedCount == 0 {
 			return core.ErrUserNotFound
 		}
-		// ModifiedCount can be 0 when the content is identical; don't treat as not found.
 		return nil
 	}, nil)
 
@@ -194,10 +189,6 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, user *coreUser.Use
 		})
 		return err
 	}
-
-	r.store.Log.Info("user updated", map[string]interface{}{
-		"id": user.ID.Hex(),
-	})
 	return nil
 }
 
@@ -209,7 +200,6 @@ func (r *MongoUserRepository) DeleteUser(ctx context.Context, id primitive.Objec
 	defer cancel()
 
 	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		// Soft delete: set is_active to false
 		result, err := r.usersColl.UpdateByID(sessCtx, id, bson.M{"$set": bson.M{"is_active": false, "updated_at": time.Now()}})
 		if err != nil {
 			return fmt.Errorf("soft delete user: %w", err)
@@ -227,10 +217,6 @@ func (r *MongoUserRepository) DeleteUser(ctx context.Context, id primitive.Objec
 		})
 		return err
 	}
-
-	r.store.Log.Info("user deleted (soft)", map[string]interface{}{
-		"id": id.Hex(),
-	})
 	return nil
 }
 
@@ -242,14 +228,12 @@ func (r *MongoUserRepository) ListUsers(ctx context.Context, skip, limit int64) 
 	defer cancel()
 
 	if limit == 0 {
-		// تم التصحيح: استخدام الثابت المصدر
-		limit = mongoData.DefaultLimit // كان: defaultLimit
+		limit = mongoData.DefaultLimit
 	}
 	if limit > 100 {
-		limit = 100 // Cap limit
+		limit = 100
 	}
 
-	// First, get the total count
 	total, err := r.usersColl.CountDocuments(ctx, bson.M{"is_active": true})
 	if err != nil {
 		return nil, 0, fmt.Errorf("count users: %w", err)
@@ -258,7 +242,7 @@ func (r *MongoUserRepository) ListUsers(ctx context.Context, skip, limit int64) 
 	opts := options.Find().
 		SetSkip(skip).
 		SetLimit(limit).
-		SetSort(bson.M{"created_at": -1}) // Sort by newest first
+		SetSort(bson.M{"created_at": -1})
 
 	cursor, err := r.usersColl.Find(ctx, bson.M{"is_active": true}, opts)
 	if err != nil {
@@ -270,7 +254,6 @@ func (r *MongoUserRepository) ListUsers(ctx context.Context, skip, limit int64) 
 	if err := cursor.All(ctx, &users); err != nil {
 		return nil, 0, fmt.Errorf("decode users: %w", err)
 	}
-
 	return users, total, nil
 }
 
@@ -296,23 +279,18 @@ func (r *MongoUserRepository) UpdateRefreshToken(ctx context.Context, id primiti
 	if result.MatchedCount == 0 {
 		return core.ErrUserNotFound
 	}
-
 	return nil
 }
 
-// Delete adapts DeleteUser to match core.Repository interface name.
 func (r *MongoUserRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	return r.DeleteUser(ctx, id)
 }
 
-// Update adapts UpdateUser to match core.Repository interface name.
 func (r *MongoUserRepository) Update(ctx context.Context, user *coreUser.User) error {
 	return r.UpdateUser(ctx, user)
 }
 
-// FindAll adapts ListUsers to match core.Repository interface name.
 func (r *MongoUserRepository) FindAll(ctx context.Context, page, limit int) ([]*coreUser.User, error) {
-	// Convert page to skip
 	if page < 1 {
 		page = 1
 	}
@@ -365,21 +343,15 @@ func (r *MongoUserRepository) FindByRefreshToken(ctx context.Context, refreshTok
 	err := r.usersColl.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			r.store.Log.Debug("refresh token not found or expired", map[string]interface{}{
-				"token": refreshToken,
-			})
 			return nil, core.ErrInvalidToken
 		}
-		r.store.Log.Error("find by refresh token failed", map[string]interface{}{
-			"error": err.Error(),
-		})
 		return nil, fmt.Errorf("find by refresh token: %w", err)
 	}
-
 	return &user, nil
 }
 
-// FindCode returns an invite code by its string code value.
+// ---- Invite Code Management ----
+
 func (r *MongoUserRepository) FindCode(ctx context.Context, code string) (*coreUser.InviteCode, error) {
 	if err := r.ensureInitialized(); err != nil {
 		return nil, err
@@ -398,7 +370,6 @@ func (r *MongoUserRepository) FindCode(ctx context.Context, code string) (*coreU
 	return &invite, nil
 }
 
-// UseCode marks an invite code as used by a user (by object id).
 func (r *MongoUserRepository) UseCode(ctx context.Context, codeID primitive.ObjectID, userID primitive.ObjectID) error {
 	if err := r.ensureInitialized(); err != nil {
 		return err
@@ -424,8 +395,6 @@ func (r *MongoUserRepository) UseCode(ctx context.Context, codeID primitive.Obje
 	return nil
 }
 
-// ---- Implementations of coreAdmin.InviteRepository ----
-
 func (r *MongoUserRepository) CreateInviteCode(ctx context.Context, invite *coreUser.InviteCode) error {
 	if err := r.ensureInitialized(); err != nil {
 		return err
@@ -435,7 +404,9 @@ func (r *MongoUserRepository) CreateInviteCode(ctx context.Context, invite *core
 
 	now := time.Now()
 	invite.CreatedAt = now
-	invite.ExpiresAt = now.Add(30 * 24 * time.Hour) // Default 30 days expiry
+	if invite.ExpiresAt.IsZero() {
+		invite.ExpiresAt = now.Add(30 * 24 * time.Hour)
+	}
 	invite.IsUsed = false
 
 	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
@@ -457,12 +428,12 @@ func (r *MongoUserRepository) CreateInviteCode(ctx context.Context, invite *core
 		})
 		return err
 	}
-
-	r.store.Log.Info("invite code created", map[string]interface{}{
-		"code": invite.Code,
-		"id":   invite.ID.Hex(),
-	})
 	return nil
+}
+
+// CreateInvite is an alias for CreateInviteCode (to satisfy coreUser.Repository)
+func (r *MongoUserRepository) CreateInvite(ctx context.Context, invite *coreUser.InviteCode) error {
+	return r.CreateInviteCode(ctx, invite)
 }
 
 func (r *MongoUserRepository) UseInviteCode(ctx context.Context, code string) (*coreUser.InviteCode, error) {
@@ -475,7 +446,6 @@ func (r *MongoUserRepository) UseInviteCode(ctx context.Context, code string) (*
 	var invite *coreUser.InviteCode
 
 	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		// 1. Find the invite code
 		filter := bson.M{
 			"code":       code,
 			"is_used":    false,
@@ -488,7 +458,6 @@ func (r *MongoUserRepository) UseInviteCode(ctx context.Context, code string) (*
 			return fmt.Errorf("find invite code: %w", err)
 		}
 
-		// 2. Mark it as used
 		update := bson.M{
 			"$set": bson.M{
 				"is_used":    true,
@@ -501,10 +470,8 @@ func (r *MongoUserRepository) UseInviteCode(ctx context.Context, code string) (*
 			return fmt.Errorf("update invite code: %w", err)
 		}
 		if result.MatchedCount == 0 {
-			// This should not happen if FindOne succeeded, but good for safety
 			return errors.New("invite code disappeared during transaction")
 		}
-
 		invite.IsUsed = true
 		return nil
 	}, nil)
@@ -516,7 +483,6 @@ func (r *MongoUserRepository) UseInviteCode(ctx context.Context, code string) (*
 		})
 		return nil, err
 	}
-
 	return invite, nil
 }
 
@@ -531,7 +497,7 @@ func (r *MongoUserRepository) ListInviteCodes(ctx context.Context, skip, limit i
 		limit = mongoData.DefaultLimit
 	}
 	if limit > 100 {
-		limit = 100 // Cap limit
+		limit = 100
 	}
 
 	total, err := r.invitesColl.CountDocuments(ctx, bson.M{})
@@ -554,7 +520,6 @@ func (r *MongoUserRepository) ListInviteCodes(ctx context.Context, skip, limit i
 	if err := cursor.All(ctx, &invites); err != nil {
 		return nil, 0, fmt.Errorf("decode invites: %w", err)
 	}
-
 	return invites, total, nil
 }
 
@@ -575,26 +540,16 @@ func (r *MongoUserRepository) DeleteInviteCode(ctx context.Context, codeID primi
 	return nil
 }
 
-// ---- Adapter methods to satisfy admin.Repository ----
-
-// CreateInvite implements user.Repository.CreateInvite
-func (r *MongoUserRepository) CreateInvite(ctx context.Context, invite *coreUser.InviteCode) error {
-	return r.CreateInviteCode(ctx, invite)
-}
-
-// CreateAdminInvite implements admin.Repository.CreateInvite
-func (r *MongoUserRepository) CreateAdminInvite(ctx context.Context, invite *coreAdmin.InviteCode) error {
-	// adapt admin.InviteCode -> user.InviteCode
-	u := &coreUser.InviteCode{
-		ID:        invite.ID,
-		Code:      invite.Code,
-		CreatedAt: invite.CreatedAt,
-		ExpiresAt: invite.ExpiresAt,
-		IsUsed:    invite.IsUsed,
-		UsedBy:    invite.UsedBy,
+func (r *MongoUserRepository) FindAllInvites(ctx context.Context, page, limit int) ([]*coreUser.InviteCode, error) {
+	if page < 1 {
+		page = 1
 	}
-	return r.CreateInviteCode(ctx, u)
+	skip := int64((page - 1) * limit)
+	invites, _, err := r.ListInviteCodes(ctx, skip, int64(limit))
+	return invites, err
 }
+
+// ---- Admin repository adapter ----
 
 // adminRepoAdapter implements admin.Repository
 type adminRepoAdapter struct {
@@ -608,7 +563,6 @@ func (r *MongoUserRepository) AsAdminRepository() coreAdmin.Repository {
 
 // CreateInvite implements admin.Repository.CreateInvite
 func (a *adminRepoAdapter) CreateInvite(ctx context.Context, invite *coreAdmin.InviteCode) error {
-	// Adapt admin.InviteCode to user.InviteCode
 	u := &coreUser.InviteCode{
 		ID:        invite.ID,
 		Code:      invite.Code,
@@ -626,17 +580,16 @@ func (a *adminRepoAdapter) ListInvites(ctx context.Context, skip, limit int64) (
 	if err != nil {
 		return nil, 0, err
 	}
-
-	var out []*coreAdmin.InviteCode
-	for _, v := range invites {
-		out = append(out, &coreAdmin.InviteCode{
+	out := make([]*coreAdmin.InviteCode, len(invites))
+	for i, v := range invites {
+		out[i] = &coreAdmin.InviteCode{
 			ID:        v.ID,
 			Code:      v.Code,
 			CreatedAt: v.CreatedAt,
 			ExpiresAt: v.ExpiresAt,
 			IsUsed:    v.IsUsed,
 			UsedBy:    v.UsedBy,
-		})
+		}
 	}
 	return out, total, nil
 }
@@ -650,52 +603,14 @@ func (a *adminRepoAdapter) DeleteInvite(ctx context.Context, id string) error {
 	return a.r.DeleteInviteCode(ctx, oid)
 }
 
-// DeleteInvite adapts to admin.Repository.DeleteInvite
-
-// DeleteInvite implements Repository.DeleteInvite
+// DeleteInvite implements Repository.DeleteInvite (primitive.ObjectID version)
 func (r *MongoUserRepository) DeleteInvite(ctx context.Context, id primitive.ObjectID) error {
 	return r.DeleteInviteCode(ctx, id)
 }
 
-// FindAllInvites implements user.Repository.FindAllInvites
-func (r *MongoUserRepository) FindAllInvites(ctx context.Context, page, limit int) ([]*coreUser.InviteCode, error) {
-	if page < 1 {
-		page = 1
-	}
-	skip := int64((page - 1) * limit)
-	invites, _, err := r.ListInviteCodes(ctx, skip, int64(limit))
-	if err != nil {
-		return nil, err
-	}
-	return invites, nil
-}
-
-func (r *MongoUserRepository) Create(ctx context.Context, u *coreUser.User, details *coreUser.UserDetails) error {
-	if err := r.ensureInitialized(); err != nil {
-		return err
-	}
-
-	// استخدام الـ Transaction لضمان حفظ الجدولين معاً أو لا شيء
-	return mongoData.ExecuteTransaction(ctx, r.store, func(sessCtx mongo.SessionContext) error {
-		// 1. حفظ المستخدم الأساسي
-		if _, err := r.usersColl.InsertOne(sessCtx, u); err != nil {
-			return err
-		}
-
-		// 2. حفظ تفاصيل المستخدم في الـ Collection الثانية
-		detailsColl := r.usersColl.Database().Collection(coreUser.UserDetailsCollectionName)
-		if _, err := detailsColl.InsertOne(sessCtx, details); err != nil {
-			return err
-		}
-
-		return nil
-	}, nil)
-}
-
-// دالة العداد التصاعدي مع إصلاح مرجع الـ Struct
+// GetNextSequence returns the next sequence value for a given sequence name.
 func (r *MongoUserRepository) GetNextSequence(ctx context.Context, sequenceName string) (int, error) {
 	collection := r.usersColl.Database().Collection("counters")
-
 	filter := bson.M{"_id": sequenceName}
 	update := bson.M{"$inc": bson.M{"seq": 1}}
 	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After)
@@ -709,4 +624,63 @@ func (r *MongoUserRepository) GetNextSequence(ctx context.Context, sequenceName 
 		return 0, err
 	}
 	return counter.Seq, nil
+}
+
+// ---- Additional methods for admin user management ----
+
+// FindAllUsers retrieves all users with pagination
+func (r *MongoUserRepository) FindAllUsers(ctx context.Context, skip, limit int64) ([]*coreUser.User, int64, error) {
+	if err := r.ensureInitialized(); err != nil {
+		return nil, 0, err
+	}
+	ctx, cancel := r.store.WithCollectionTimeout(ctx, "users", "read")
+	defer cancel()
+
+	filter := bson.M{}
+	total, err := r.usersColl.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count users: %w", err)
+	}
+
+	opts := options.Find().
+		SetSkip(skip).
+		SetLimit(limit).
+		SetSort(bson.M{"created_at": -1})
+
+	cursor, err := r.usersColl.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, fmt.Errorf("find users: %w", err)
+	}
+	defer cursor.Close(ctx)
+
+	var users []*coreUser.User
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, 0, fmt.Errorf("decode users: %w", err)
+	}
+	return users, total, nil
+}
+
+// UpdateUserRole adds or removes a role from a user
+func (r *MongoUserRepository) UpdateUserRole(ctx context.Context, userID primitive.ObjectID, role string, add bool) error {
+	if err := r.ensureInitialized(); err != nil {
+		return err
+	}
+	ctx, cancel := r.store.WithCollectionTimeout(ctx, "users", "write")
+	defer cancel()
+
+	var update bson.M
+	if add {
+		update = bson.M{"$addToSet": bson.M{"roles": role}}
+	} else {
+		update = bson.M{"$pull": bson.M{"roles": role}}
+	}
+
+	result, err := r.usersColl.UpdateByID(ctx, userID, update)
+	if err != nil {
+		return fmt.Errorf("update user role: %w", err)
+	}
+	if result.MatchedCount == 0 {
+		return core.ErrUserNotFound
+	}
+	return nil
 }

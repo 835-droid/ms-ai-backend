@@ -1,3 +1,4 @@
+// internal/core/admin/service.go
 package admin
 
 import (
@@ -13,22 +14,28 @@ import (
 // Service provides admin functionality
 type Service interface {
 	CreateInviteCode(ctx context.Context, length int) (*InviteCode, error)
+	CreateCustomInviteCode(ctx context.Context, code string, daysValid int) (*InviteCode, error)
 	ListInviteCodes(ctx context.Context, skip, limit int64) ([]*InviteCode, int64, error)
 	DeleteInviteCode(ctx context.Context, id string) error
 	GetMetrics(ctx context.Context) map[string]interface{}
 	GetDBMetrics(ctx context.Context) map[string]interface{}
+	ListUsers(ctx context.Context, page, limit int) ([]*UserInfo, int64, error)
+	PromoteToAdmin(ctx context.Context, userID string) error
+}
+
+// UserInfo represents user data for admin panel
+type UserInfo struct {
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
+	Roles     []string  `json:"roles"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // AdminService implements Service
 type AdminService struct {
 	repo Repository
 }
-
-// Deprecated: Use admin.NewAdminService with logger (implemented in admin_service.go)
-// NewAdminService kept for compatibility but should not be used.
-// func NewAdminService(repo Repository) *AdminService {
-//     return &AdminService{repo: repo}
-// }
 
 // InviteCode represents an invite code
 type InviteCode struct {
@@ -40,6 +47,7 @@ type InviteCode struct {
 	UsedBy    primitive.ObjectID `bson:"used_by,omitempty" json:"used_by,omitempty"`
 }
 
+// CreateInviteCode generates a random invite code
 func (s *AdminService) CreateInviteCode(ctx context.Context, length int) (*InviteCode, error) {
 	if length <= 0 {
 		length = 12
@@ -54,7 +62,7 @@ func (s *AdminService) CreateInviteCode(ctx context.Context, length int) (*Invit
 	invite := &InviteCode{
 		Code:      code,
 		CreatedAt: now,
-		ExpiresAt: now.Add(24 * time.Hour), // Expires in 24 hours
+		ExpiresAt: now.Add(24 * time.Hour),
 	}
 
 	if err := s.repo.CreateInvite(ctx, invite); err != nil {
@@ -63,23 +71,44 @@ func (s *AdminService) CreateInviteCode(ctx context.Context, length int) (*Invit
 	return invite, nil
 }
 
+// CreateCustomInviteCode creates an invite code with a specific code string
+func (s *AdminService) CreateCustomInviteCode(ctx context.Context, code string, daysValid int) (*InviteCode, error) {
+	now := time.Now()
+	if daysValid <= 0 {
+		daysValid = 30
+	}
+	invite := &InviteCode{
+		ID:        primitive.NewObjectID(),
+		Code:      code,
+		CreatedAt: now,
+		ExpiresAt: now.Add(time.Duration(daysValid) * 24 * time.Hour),
+		IsUsed:    false,
+	}
+	if err := s.repo.CreateInvite(ctx, invite); err != nil {
+		return nil, fmt.Errorf("failed to create custom invite: %w", err)
+	}
+	return invite, nil
+}
+
+// ListInviteCodes returns paginated invite codes
 func (s *AdminService) ListInviteCodes(ctx context.Context, skip, limit int64) ([]*InviteCode, int64, error) {
 	return s.repo.ListInvites(ctx, skip, limit)
 }
 
+// DeleteInviteCode deletes an invite code by ID
 func (s *AdminService) DeleteInviteCode(ctx context.Context, id string) error {
 	return s.repo.DeleteInvite(ctx, id)
 }
 
+// GetMetrics returns system metrics
 func (s *AdminService) GetMetrics(ctx context.Context) map[string]interface{} {
-	// TODO: Implement system metrics
 	return map[string]interface{}{
 		"uptime": time.Since(time.Now()).String(),
 	}
 }
 
+// GetDBMetrics returns database metrics
 func (s *AdminService) GetDBMetrics(ctx context.Context) map[string]interface{} {
-	// TODO: Implement database metrics
 	return map[string]interface{}{
 		"status": "connected",
 	}

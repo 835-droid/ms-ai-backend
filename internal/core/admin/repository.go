@@ -1,3 +1,4 @@
+// internal/core/admin/repository.go
 package admin
 
 import (

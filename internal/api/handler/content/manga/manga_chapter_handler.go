@@ -23,13 +23,13 @@ func NewMangaChapterHandler(s manga.MangaChapterService) *MangaChapterHandler {
 }
 
 type mangaCreateChapterRequest struct {
-	Title   string  `json:"title" binding:"required"`
-	Content string  `json:"content" binding:"required"`
-	Number  float64 `json:"number"`
+	Title  string   `json:"title" binding:"required"`
+	Images []string `json:"images" binding:"required,min=1"`
+	Number float64  `json:"number"`
 }
 
 func (h *MangaChapterHandler) CreateChapter(c *gin.Context) {
-	mangaIDStr := c.Param("manga_id")
+	mangaIDStr := c.Param("mangaID")
 	mangaID, err := primitive.ObjectIDFromHex(mangaIDStr)
 	if err != nil {
 		response.ValidationError(c, "invalid manga id")
@@ -65,6 +65,7 @@ func (h *MangaChapterHandler) CreateChapter(c *gin.Context) {
 		Number:  int(req.Number),
 		Title:   req.Title,
 		MangaID: mangaID,
+		Pages:   req.Images,
 	}
 
 	if _, err := h.service.CreateMangaChapter(c.Request.Context(), chapter, callerID, roles); err != nil {
@@ -76,7 +77,7 @@ func (h *MangaChapterHandler) CreateChapter(c *gin.Context) {
 }
 
 func (h *MangaChapterHandler) ListChapters(c *gin.Context) {
-	mangaIDStr := c.Param("manga_id")
+	mangaIDStr := c.Param("mangaID")
 	mangaID, err := primitive.ObjectIDFromHex(mangaIDStr)
 	if err != nil {
 		response.ValidationError(c, "invalid manga id")
@@ -113,7 +114,7 @@ func (h *MangaChapterHandler) ListChapters(c *gin.Context) {
 }
 
 func (h *MangaChapterHandler) GetChapter(c *gin.Context) {
-	chapterID, err := primitive.ObjectIDFromHex(c.Param("chapter_id"))
+	chapterID, err := primitive.ObjectIDFromHex(c.Param("chapterID"))
 	if err != nil {
 		response.ValidationError(c, "invalid chapter id")
 		return
@@ -133,7 +134,7 @@ func (h *MangaChapterHandler) GetChapter(c *gin.Context) {
 }
 
 func (h *MangaChapterHandler) DeleteChapter(c *gin.Context) {
-	chapterID, err := primitive.ObjectIDFromHex(c.Param("chapter_id"))
+	chapterID, err := primitive.ObjectIDFromHex(c.Param("chapterID"))
 	if err != nil {
 		response.ValidationError(c, "invalid chapter id")
 		return
@@ -173,7 +174,7 @@ func (h *MangaChapterHandler) UpdateChapter(c *gin.Context) {
 		return
 	}
 
-	chapterID, err := primitive.ObjectIDFromHex(c.Param("chapter_id"))
+	chapterID, err := primitive.ObjectIDFromHex(c.Param("chapterID"))
 	if err != nil {
 		response.ValidationError(c, "invalid chapter id")
 		return

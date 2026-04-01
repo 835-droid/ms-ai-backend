@@ -3,663 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MS-AI | لوحة الإدارة</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* أنماط خاصة بلوحة الإدارة */
-        .admin-tabs {
-            display: flex;
-            margin-bottom: 30px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 5px;
-        }
-
-        .tab-button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: all 0.3s;
-        }
-
-        .tab-button.active {
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            font-weight: bold;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .form-group input, .form-group textarea, .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1em;
-        }
-
-        .form-group textarea {
-            height: 100px;
-            resize: vertical;
-        }
-
-        .tags-input {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            min-height: 40px;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            background: white;
-        }
-
-        .tag-item {
-            background: #007bff;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 15px;
-            font-size: 0.9em;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .tag-item button {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 1.2em;
-            line-height: 1;
-        }
-
-        .manga-list {
-            margin-top: 30px;
-        }
-
-        .manga-item {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border: 1px solid #e9ecef;
-        }
-
-        .manga-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .manga-item-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .manga-item-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: background 0.3s;
-        }
-
-        .btn-secondary:hover {
-            background: #545b62;
-        }
-
-        .chapters-list {
-            margin-top: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        .chapter-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .chapter-item:last-child {
-            border-bottom: none;
-        }
-
-        .chapter-info h4 {
-            margin: 0;
-            font-size: 1em;
-            color: #333;
-        }
-
-        .chapter-info small {
-            color: #666;
-        }
-
-        .chapter-actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-small {
-            padding: 4px 8px;
-            font-size: 0.8em;
-            border-radius: 3px;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            margin: 0;
-            font-size: 1.5em;
-            color: #333;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5em;
-            cursor: pointer;
-            color: #666;
-        }
-
-        .file-input-group {
-            position: relative;
-        }
-
-        .file-input {
-            position: absolute;
-            opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
-        }
-
-        .file-input-label {
-            display: inline-block;
-            padding: 12px;
-            border: 2px dashed #ccc;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            text-align: center;
-            transition: border-color 0.3s;
-        }
-
-        .file-input-label:hover {
-            border-color: #007bff;
-        }
-
-        .file-preview {
-            margin-top: 10px;
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 6px;
-            display: none;
-        }
-    </style>
+    <title>MS-AI | الإدارة</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="auth-card dashboard-card">
-            <h2>⚙️ لوحة الإدارة</h2>
-            <p style="color: #6c757d; font-size: 1.1em;">
-                إدارة المانجا والفصول
-            </p>
-
-            <div class="admin-tabs">
-                <button class="tab-button active" onclick="switchTab('manga')">إضافة مانجا</button>
-                <button class="tab-button" onclick="switchTab('chapters')">إدارة الفصول</button>
+    <main class="page-shell">
+        <section class="page-card">
+            <div class="page-header">
+                <div>
+                    <h1>لوحة الإدارة</h1>
+                    <p>إضافة مانجا وفصول بروابط الصور</p>
+                </div>
+                <div class="header-actions">
+                    <a href="control.html" class="btn btn-secondary">العودة</a>
+                    <button id="logout-button" class="btn btn-danger">تسجيل الخروج</button>
+                </div>
             </div>
 
-            <div class="message" id="admin-message"></div>
+            <div id="admin-message" class="message"></div>
 
-            <!-- تبويب إضافة المانجا -->
-            <div id="manga-tab" class="tab-content active">
-                <form id="add-manga-form">
+            <div class="tabs">
+                <button type="button" class="tab-button active" data-tab="manga">إضافة مانجا</button>
+                <button type="button" class="tab-button" data-tab="chapters">إدارة الفصول</button>
+            </div>
+
+            <div id="tab-manga" class="tab-content active">
+                <form id="add-manga-form" class="form-grid">
                     <div class="form-group">
-                        <label for="manga-title">عنوان المانجا *</label>
-                        <input type="text" id="manga-title" placeholder="أدخل عنوان المانجا" required>
+                        <label for="manga-title">عنوان المانجا</label>
+                        <input id="manga-title" type="text" required>
                     </div>
 
                     <div class="form-group">
-                        <label for="manga-description">وصف المانجا *</label>
-                        <textarea id="manga-description" placeholder="أدخل وصف المانجا" required></textarea>
+                        <label for="manga-description">وصف المانجا</label>
+                        <textarea id="manga-description" rows="5" required></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label for="manga-cover">صورة الغلاف</label>
-                        <div class="file-input-group">
-                            <input type="file" id="manga-cover" class="file-input" accept="image/*">
-                            <label for="manga-cover" class="file-input-label">
-                                اختر صورة الغلاف (اختياري)
-                            </label>
-                        </div>
-                        <img id="cover-preview" class="file-preview" alt="معاينة الصورة">
+                        <label for="manga-cover-url">رابط صورة الغلاف</label>
+                        <input id="manga-cover-url" type="text" placeholder="https://...">
                     </div>
 
                     <div class="form-group">
-                        <label for="manga-tags">العلامات (اضغط Enter لإضافة)</label>
-                        <input type="text" id="manga-tags-input" placeholder="أدخل علامة واضغط Enter">
-                        <div class="tags-input" id="manga-tags"></div>
+                        <label for="manga-tags-input">العلامات</label>
+                        <input id="manga-tags-input" type="text" placeholder="اكتب علامة ثم Enter">
+                        <div id="tags-container" class="tags-wrap"></div>
                     </div>
 
-                    <button type="submit" id="add-manga-button">إضافة المانجا</button>
+                    <button id="add-manga-button" class="btn btn-primary" type="submit">إضافة المانجا</button>
                 </form>
             </div>
 
-            <!-- تبويب إدارة الفصول -->
-            <div id="chapters-tab" class="tab-content">
-                <div id="manga-list">
-                    <div class="loading">جاري تحميل المانجا...</div>
-                </div>
-            </div>
-
-            <p style="text-align: center; margin-top: 20px;">
-                <a href="dashboard.html">العودة للمكتبة</a>
-            </p>
-        </div>
-    </div>
-
-    <!-- Modal لإضافة الفصل -->
-    <div id="chapter-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">إضافة فصل جديد</h3>
-                <button class="modal-close" onclick="closeChapterModal()">&times;</button>
-            </div>
-            <form id="add-chapter-form">
-                <input type="hidden" id="chapter-manga-id">
-                <div class="form-group">
-                    <label for="chapter-title">عنوان الفصل *</label>
-                    <input type="text" id="chapter-title" placeholder="أدخل عنوان الفصل" required>
-                </div>
-                <div class="form-group">
-                    <label for="chapter-number">رقم الفصل *</label>
-                    <input type="number" id="chapter-number" placeholder="أدخل رقم الفصل" min="1" required>
-                </div>
-                <button type="submit" id="add-chapter-button">إضافة الفصل</button>
-            </form>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
-
-    <script>
-        let currentTab = 'manga';
-        let mangaList = [];
-        let currentTags = [];
-
-        // 🎯 بوابة الأمان
-        checkAuthentication('index.html');
-
-        // تبديل التبويبات
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-            document.getElementById(`${tab}-tab`).classList.add('active');
-
-            if (tab === 'chapters') {
-                loadMangaList();
-            }
-        }
-
-        // معالجة رفع الصور
-        document.getElementById('manga-cover').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('cover-preview');
-
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        });
-
-        // معالجة العلامات
-        document.getElementById('manga-tags-input').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const tag = this.value.trim();
-                if (tag && !currentTags.includes(tag)) {
-                    currentTags.push(tag);
-                    updateTagsDisplay();
-                    this.value = '';
-                }
-            }
-        });
-
-        function updateTagsDisplay() {
-            const tagsContainer = document.getElementById('manga-tags');
-            tagsContainer.innerHTML = currentTags.map(tag => `
-                <span class="tag-item">
-                    ${tag}
-                    <button onclick="removeTag('${tag}')">&times;</button>
-                </span>
-            `).join('');
-        }
-
-        function removeTag(tag) {
-            currentTags = currentTags.filter(t => t !== tag);
-            updateTagsDisplay();
-        }
-
-        // إضافة المانجا
-        document.getElementById('add-manga-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const title = document.getElementById('manga-title').value.trim();
-            const description = document.getElementById('manga-description').value.trim();
-            const coverFile = document.getElementById('manga-cover').files[0];
-
-            if (!title || !description) {
-                showMessage('error', 'يرجى ملء جميع الحقول المطلوبة');
-                return;
-            }
-
-            const button = document.getElementById('add-manga-button');
-            button.disabled = true;
-            button.textContent = 'جاري الإضافة...';
-
-            try {
-                let coverImageUrl = '';
-
-                // رفع الصورة إذا كانت موجودة
-                if (coverFile) {
-                    coverImageUrl = await uploadImage(coverFile);
-                }
-
-                const response = await fetch('/api/mangas', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getAccessToken()
-                    },
-                    body: JSON.stringify({
-                        title,
-                        description,
-                        cover_image: coverImageUrl,
-                        tags: currentTags
-                    })
-                });
-
-                const responseData = await response.json();
-
-                if (response.ok) {
-                    showMessage('success', `تمت إضافة المانجا "${title}" بنجاح!`);
-                    document.getElementById('add-manga-form').reset();
-                    currentTags = [];
-                    updateTagsDisplay();
-                    document.getElementById('cover-preview').style.display = 'none';
-                } else {
-                    const errorMessage = responseData.error || 'خطأ أثناء إضافة المانجا';
-                    showMessage('error', errorMessage);
-                }
-            } catch (error) {
-                showMessage('error', 'فشل الاتصال بخادم الإدارة');
-                console.error('Add manga error:', error);
-            } finally {
-                button.disabled = false;
-                button.textContent = 'إضافة المانجا';
-            }
-        });
-
-        // رفع الصورة (مؤقت - يحتاج تنفيذ في الباك اند)
-        async function uploadImage(file) {
-            // TODO: تنفيذ رفع الصورة للخادم
-            // هذا placeholder - في الواقع يجب إرسال الملف للخادم
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // تحميل قائمة المانجا
-        async function loadMangaList() {
-            try {
-                const response = await fetch('/api/mangas', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + getAccessToken()
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('فشل في تحميل المانجا');
-                }
-
-                const data = await response.json();
-                mangaList = data.data || [];
-                displayMangaList(mangaList);
-            } catch (error) {
-                console.error('Error loading manga list:', error);
-                document.getElementById('manga-list').innerHTML =
-                    '<div class="error">حدث خطأ في تحميل المانجا</div>';
-            }
-        }
-
-        function displayMangaList(mangas) {
-            const container = document.getElementById('manga-list');
-
-            if (mangas.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">لا توجد مانجا متاحة</p>';
-                return;
-            }
-
-            const mangaHtml = mangas.map(manga => `
-                <div class="manga-item">
-                    <div class="manga-item-header">
-                        <div class="manga-item-title">${manga.title}</div>
-                        <div class="manga-item-actions">
-                            <button class="btn-secondary" onclick="openChapterModal('${manga.id}', '${manga.title}')">
-                                إضافة فصل
-                            </button>
+            <div id="tab-chapters" class="tab-content">
+                <div class="admin-layout">
+                    <div class="admin-panel">
+                        <div class="form-group">
+                            <label for="chapter-manga-id">اختر المانجا</label>
+                            <select id="chapter-manga-id"></select>
                         </div>
+
+                        <form id="add-chapter-form" class="form-grid">
+                            <div class="form-group">
+                                <label for="chapter-title">عنوان الفصل</label>
+                                <input id="chapter-title" type="text" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="chapter-number">رقم الفصل</label>
+                                <input id="chapter-number" type="number" min="1" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="chapter-urls">روابط الصور</label>
+                                <textarea id="chapter-urls" rows="8" placeholder="رابط كل صورة في سطر"></textarea>
+                            </div>
+
+                            <button id="add-chapter-button" class="btn btn-success" type="submit">إضافة الفصل</button>
+                        </form>
                     </div>
-                    <div class="chapters-list" id="chapters-${manga.id}">
-                        <div class="loading">جاري تحميل الفصول...</div>
-                    </div>
-                </div>
-            `).join('');
 
-            container.innerHTML = mangaHtml;
-
-            // تحميل الفصول لكل مانجا
-            mangas.forEach(manga => loadChapters(manga.id));
-        }
-
-        async function loadChapters(mangaId) {
-            try {
-                const response = await fetch(`/api/mangas/${mangaId}/chapters`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': 'Bearer ' + getAccessToken()
-                    }
-                });
-
-                const chapters = response.ok ? await response.json() : { chapters: [] };
-                displayChapters(mangaId, chapters.chapters || []);
-            } catch (error) {
-                console.error('Error loading chapters:', error);
-                document.getElementById(`chapters-${mangaId}`).innerHTML =
-                    '<p style="color: #dc3545;">فشل في تحميل الفصول</p>';
-            }
-        }
-
-        function displayChapters(mangaId, chapters) {
-            const container = document.getElementById(`chapters-${mangaId}`);
-
-            if (chapters.length === 0) {
-                container.innerHTML = '<p style="color: #666; text-align: center;">لا توجد فصول</p>';
-                return;
-            }
-
-            const chaptersHtml = chapters.map(chapter => `
-                <div class="chapter-item">
-                    <div class="chapter-info">
-                        <h4>الفصل ${chapter.number}: ${chapter.title}</h4>
-                        <small>تم النشر: ${new Date(chapter.created_at).toLocaleDateString('ar-SA')}</small>
-                    </div>
-                    <div class="chapter-actions">
-                        <button class="btn-small btn-secondary" onclick="editChapter('${chapter.id}')">تعديل</button>
-                        <button class="btn-small" style="background: #dc3545;" onclick="deleteChapter('${chapter.id}')">حذف</button>
+                    <div class="admin-panel">
+                        <h2>الفصول الحالية</h2>
+                        <div id="admin-chapter-list" class="admin-list"></div>
                     </div>
                 </div>
-            `).join('');
+            </div>
+        </section>
+    </main>
 
-            container.innerHTML = chaptersHtml;
-        }
-
-        function openChapterModal(mangaId, mangaTitle) {
-            document.getElementById('chapter-manga-id').value = mangaId;
-            document.querySelector('.modal-title').textContent = `إضافة فصل لـ "${mangaTitle}"`;
-            document.getElementById('chapter-modal').classList.add('show');
-        }
-
-        function closeChapterModal() {
-            document.getElementById('chapter-modal').classList.remove('show');
-            document.getElementById('add-chapter-form').reset();
-        }
-
-        // إضافة الفصل
-        document.getElementById('add-chapter-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const mangaId = document.getElementById('chapter-manga-id').value;
-            const title = document.getElementById('chapter-title').value.trim();
-            const number = parseInt(document.getElementById('chapter-number').value);
-
-            if (!title || !number) {
-                showMessage('error', 'يرجى ملء جميع الحقول');
-                return;
-            }
-
-            const button = document.getElementById('add-chapter-button');
-            button.disabled = true;
-            button.textContent = 'جاري الإضافة...';
-
-            try {
-                const response = await fetch(`/api/mangas/${mangaId}/chapters`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + getAccessToken()
-                    },
-                    body: JSON.stringify({
-                        title,
-                        number
-                    })
-                });
-
-                const responseData = await response.json();
-
-                if (response.ok) {
-                    showMessage('success', `تمت إضافة الفصل "${title}" بنجاح!`);
-                    closeChapterModal();
-                    loadChapters(mangaId);
-                } else {
-                    const errorMessage = responseData.error || 'خطأ أثناء إضافة الفصل';
-                    showMessage('error', errorMessage);
-                }
-            } catch (error) {
-                showMessage('error', 'فشل الاتصال بخادم الإدارة');
-                console.error('Add chapter error:', error);
-            } finally {
-                button.disabled = false;
-                button.textContent = 'إضافة الفصل';
-            }
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+            });
         });
-
-        function editChapter(chapterId) {
-            // TODO: تنفيذ تعديل الفصل
-            showMessage('info', 'تعديل الفصل قيد التطوير');
-        }
-
-        function deleteChapter(chapterId) {
-            // TODO: تنفيذ حذف الفصل
-            showMessage('info', 'حذف الفصل قيد التطوير');
-        }
-
-        // تحميل الصفحة
-        window.onload = function() {
-            setupAuthListeners();
-        };
     </script>
 </body>
 </html>

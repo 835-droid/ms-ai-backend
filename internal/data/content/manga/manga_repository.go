@@ -1,4 +1,4 @@
-package data
+package manga
 
 import (
 	"context"
@@ -95,10 +95,6 @@ func (r *MongoMangaRepository) GetMangaByID(ctx context.Context, id primitive.Ob
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga", "read")
 	defer cancel()
 
-	r.store.Log.Debug("getting manga", map[string]interface{}{
-		"id": id.Hex(),
-	})
-
 	var manga coremanga.Manga
 	err := r.coll.FindOne(ctx, bson.M{"_id": id}).Decode(&manga)
 	if err != nil {
@@ -111,7 +107,6 @@ func (r *MongoMangaRepository) GetMangaByID(ctx context.Context, id primitive.Ob
 		})
 		return nil, fmt.Errorf("find manga by id: %w", err)
 	}
-
 	return &manga, nil
 }
 
@@ -122,10 +117,6 @@ func (r *MongoMangaRepository) GetMangaBySlug(ctx context.Context, slug string) 
 	}
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga", "read")
 	defer cancel()
-
-	r.store.Log.Debug("finding manga by slug", map[string]interface{}{
-		"slug": slug,
-	})
 
 	var manga coremanga.Manga
 	err := r.coll.FindOne(ctx, bson.M{"slug": slug}).Decode(&manga)
@@ -139,7 +130,6 @@ func (r *MongoMangaRepository) GetMangaBySlug(ctx context.Context, slug string) 
 		})
 		return nil, fmt.Errorf("find manga by slug: %w", err)
 	}
-
 	return &manga, nil
 }
 
@@ -151,18 +141,12 @@ func (r *MongoMangaRepository) ListMangas(ctx context.Context, skip, limit int64
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga", "read")
 	defer cancel()
 
-	r.store.Log.Debug("listing mangas", map[string]interface{}{
-		"skip":  skip,
-		"limit": limit,
-	})
-
 	filter := bson.M{}
 	opts := options.Find().
 		SetSkip(skip).
 		SetLimit(limit).
 		SetSort(bson.D{{Key: "created_at", Value: -1}})
 
-	// Get total count
 	total, err := r.coll.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count mangas: %w", err)
@@ -176,11 +160,9 @@ func (r *MongoMangaRepository) ListMangas(ctx context.Context, skip, limit int64
 
 	var mangas []*coremanga.Manga
 	if err := cur.All(ctx, &mangas); err != nil {
-		r.store.Log.Error("decode manga list failed", map[string]interface{}{"error": err.Error()})
 		return nil, 0, fmt.Errorf("decode mangas: %w", err)
 	}
 
-	r.store.Log.Info("mangas listed", map[string]interface{}{"count": len(mangas), "total": total, "skip": skip, "limit": limit})
 	return mangas, total, nil
 }
 
@@ -191,11 +173,6 @@ func (r *MongoMangaRepository) UpdateManga(ctx context.Context, manga *coremanga
 	}
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga", "write")
 	defer cancel()
-
-	r.store.Log.Debug("updating manga", map[string]interface{}{
-		"id":    manga.ID.Hex(),
-		"title": manga.Title,
-	})
 
 	manga.UpdatedAt = time.Now()
 
@@ -212,7 +189,6 @@ func (r *MongoMangaRepository) UpdateManga(ctx context.Context, manga *coremanga
 			return corecommon.ErrSlugExists
 		}
 
-		// Update the manga
 		result, err := r.coll.ReplaceOne(sessCtx, bson.M{"_id": manga.ID}, manga)
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
@@ -223,7 +199,6 @@ func (r *MongoMangaRepository) UpdateManga(ctx context.Context, manga *coremanga
 		if result.MatchedCount == 0 {
 			return corecommon.ErrNotFound
 		}
-
 		return nil
 	}, nil)
 
@@ -250,25 +225,12 @@ func (r *MongoMangaRepository) DeleteManga(ctx context.Context, id primitive.Obj
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga", "write")
 	defer cancel()
 
-	r.store.Log.Debug("deleting manga", map[string]interface{}{
-		"id": id.Hex(),
-	})
-
 	result, err := r.coll.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
-		r.store.Log.Error("delete manga failed", map[string]interface{}{
-			"id":    id.Hex(),
-			"error": err.Error(),
-		})
 		return fmt.Errorf("delete manga: %w", err)
 	}
-
 	if result.DeletedCount == 0 {
 		return corecommon.ErrNotFound
 	}
-
-	r.store.Log.Info("manga deleted", map[string]interface{}{
-		"id": id.Hex(),
-	})
 	return nil
 }

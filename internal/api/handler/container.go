@@ -1,33 +1,49 @@
-// internal/api/handler/container.go
 package handler
 
 import (
+	"github.com/835-droid/ms-ai-backend/internal/api/handler/health"
 	coreadmin "github.com/835-droid/ms-ai-backend/internal/core/admin"
 	coreauth "github.com/835-droid/ms-ai-backend/internal/core/auth"
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
+	datamongo "github.com/835-droid/ms-ai-backend/internal/data/mongo"
+	datapostgres "github.com/835-droid/ms-ai-backend/internal/data/postgres"
 )
 
-// Container holds all HTTP handlers
 type Container struct {
 	AuthHandler         *AuthHandler
 	AdminHandler        *AdminHandler
-	HealthHandler       *HealthHandler
+	HealthHandler       *health.Handler
 	MangaHandler        *MangaHandler
 	MangaChapterHandler *MangaChapterHandler
 }
 
-// NewContainer creates and initializes all HTTP handlers
 func NewContainer(
 	authService coreauth.AuthService,
 	mangaService coremanga.MangaService,
 	mangaChapterService coremanga.MangaChapterService,
 	adminService coreadmin.Service,
+	mongoStore *datamongo.MongoStore,
+	postgresStore *datapostgres.PostgresStore,
 ) *Container {
+	var adminHandler *AdminHandler
+	if adminService != nil {
+		adminHandler = NewAdminHandler(adminService)
+	}
+
+	var mangaHandler *MangaHandler
+	var chapterHandler *MangaChapterHandler
+	if mangaService != nil {
+		mangaHandler = NewMangaHandler(mangaService)
+	}
+	if mangaChapterService != nil {
+		chapterHandler = NewMangaChapterHandler(mangaChapterService)
+	}
+
 	return &Container{
 		AuthHandler:         NewAuthHandler(authService),
-		AdminHandler:        NewAdminHandler(adminService),
-		HealthHandler:       NewHealthHandler(nil), // TODO: pass mongo store
-		MangaHandler:        NewMangaHandler(mangaService),
-		MangaChapterHandler: NewMangaChapterHandler(mangaChapterService),
+		AdminHandler:        adminHandler,
+		HealthHandler:       health.NewHandler(mongoStore, postgresStore),
+		MangaHandler:        mangaHandler,
+		MangaChapterHandler: chapterHandler,
 	}
 }

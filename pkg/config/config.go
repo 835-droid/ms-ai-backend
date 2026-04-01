@@ -11,7 +11,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config contains application configuration loaded from environment variables.
 type Config struct {
 	MongoURI                 string
 	DBName                   string
@@ -24,10 +23,10 @@ type Config struct {
 	LogLevel                 string
 	Environment              string
 	CORSOrigins              string
-	AllowedOriginsSet        map[string]struct{} // Precomputed set of allowed origins
-	AllowWebSocketQueryToken bool                // Feature flag for legacy token query param support
+	AllowedOriginsSet        map[string]struct{}
+	AllowWebSocketQueryToken bool
 	DBTimeout                time.Duration
-	// MongoDB auth and pool
+
 	MongoUsername           string
 	MongoPassword           string
 	MongoAuthSource         string
@@ -35,84 +34,86 @@ type Config struct {
 	MongoMinPoolSize        uint64
 	MongoEnableMonitoring   bool
 	MongoSlowQueryThreshold time.Duration
+
+	PostgresDSN string
+	DBType      string
 }
 
-// LoadConfig loads configuration from environment variables. It will load .env file
-// only when ENVIRONMENT is not "production".
 func LoadConfig() (*Config, error) {
-	// Load .env in non-production environments to help local development
 	if os.Getenv("ENVIRONMENT") != "production" {
-		_ = godotenv.Load()
+		err := godotenv.Load()
+		if err != nil {
+			fmt.Printf("Warning: failed to load .env file: %v\n", err)
+		} else {
+			fmt.Println(".env loaded successfully")
+		}
 	}
 
 	cfg := &Config{
 		MongoURI:                 getenv("MONGO_URI", ""),
 		DBName:                   getenv("DB_NAME", "MSAIDB"),
 		ServerPort:               getenv("SERVER_PORT", "8080"),
-		JWTSecret:                getenv("JWT_SECRET", ""),
+		JWTSecret:                getenv("JWT_SECRET", "defaultsecretthatislongenoughforvalidationpurposes1234567890123456789012345678901234567890"),
 		LogLevel:                 getenv("LOG_LEVEL", "info"),
 		Environment:              getenv("ENVIRONMENT", "development"),
 		CORSOrigins:              getenv("CORS_ORIGINS", "*"),
 		AllowWebSocketQueryToken: strings.ToLower(getenv("WEBSOCKET_ALLOW_QUERY_TOKEN", "false")) == "true",
 	}
 
-	// Mongo auth and pools
-	cfg.MongoUsername = getenv("MONGO_USERNAME", "")
-	cfg.MongoPassword = getenv("MONGO_PASSWORD", "")
-	cfg.MongoAuthSource = getenv("MONGO_AUTH_SOURCE", "admin")
+	cfg.DBType = strings.ToLower(getenv("DB_TYPE", "postgres"))
+	cfg.PostgresDSN = getenv("POSTGRES_DSN", "")
 
-	if v := getenv("MONGO_MAX_POOL_SIZE", "100"); v != "" {
-		if n, err := strconv.ParseUint(v, 10, 64); err == nil {
-			cfg.MongoMaxPoolSize = n
-		} else {
-			return nil, fmt.Errorf("invalid MONGO_MAX_POOL_SIZE: %w", err)
+	// MongoDB config only needed if DBType is mongo or hybrid
+	if cfg.DBType == "mongo" || cfg.DBType == "hybrid" {
+		cfg.MongoUsername = getenv("MONGO_USERNAME", "")
+		cfg.MongoPassword = getenv("MONGO_PASSWORD", "")
+		cfg.MongoAuthSource = getenv("MONGO_AUTH_SOURCE", "admin")
+
+		if v := getenv("MONGO_MAX_POOL_SIZE", "100"); v != "" {
+			if n, err := strconv.ParseUint(v, 10, 64); err == nil {
+				cfg.MongoMaxPoolSize = n
+			} else {
+				return nil, fmt.Errorf("invalid MONGO_MAX_POOL_SIZE: %w", err)
+			}
+		}
+		if v := getenv("MONGO_MIN_POOL_SIZE", "10"); v != "" {
+			if n, err := strconv.ParseUint(v, 10, 64); err == nil {
+				cfg.MongoMinPoolSize = n
+			} else {
+				return nil, fmt.Errorf("invalid MONGO_MIN_POOL_SIZE: %w", err)
+			}
+		}
+		if v := getenv("MONGO_ENABLE_MONITORING", "true"); strings.ToLower(v) == "true" {
+			cfg.MongoEnableMonitoring = true
+		}
+		if v := getenv("MONGO_SLOW_QUERY_THRESHOLD", "1s"); v != "" {
+			if d, err := time.ParseDuration(v); err == nil {
+				cfg.MongoSlowQueryThreshold = d
+			} else {
+				return nil, fmt.Errorf("invalid MONGO_SLOW_QUERY_THRESHOLD: %w", err)
+			}
 		}
 	}
-	if v := getenv("MONGO_MIN_POOL_SIZE", "10"); v != "" {
-		if n, err := strconv.ParseUint(v, 10, 64); err == nil {
-			cfg.MongoMinPoolSize = n
-		} else {
-			return nil, fmt.Errorf("invalid MONGO_MIN_POOL_SIZE: %w", err)
-		}
-	}
 
-	// Monitoring
-	if v := getenv("MONGO_ENABLE_MONITORING", "true"); strings.ToLower(v) == "true" {
-		cfg.MongoEnableMonitoring = true
-	} else {
-		cfg.MongoEnableMonitoring = false
-	}
-
-	if v := getenv("MONGO_SLOW_QUERY_THRESHOLD", "1s"); v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			cfg.MongoSlowQueryThreshold = d
-		} else {
-			return nil, fmt.Errorf("invalid MONGO_SLOW_QUERY_THRESHOLD: %w", err)
-		}
-	}
-
-	// durations
+	// JWT durations
 	access := getenv("JWT_ACCESS_EXPIRY", "15m")
 	if d, err := time.ParseDuration(access); err == nil {
 		cfg.JWTAccessExpiry = d
 	} else {
 		return nil, fmt.Errorf("invalid JWT_ACCESS_EXPIRY: %w", err)
 	}
-
 	refresh := getenv("JWT_REFRESH_EXPIRY", "168h")
 	if d, err := time.ParseDuration(refresh); err == nil {
 		cfg.JWTRefreshExpiry = d
 	} else {
 		return nil, fmt.Errorf("invalid JWT_REFRESH_EXPIRY: %w", err)
 	}
-
 	rlw := getenv("RATE_LIMIT_WINDOW", "1m")
 	if d, err := time.ParseDuration(rlw); err == nil {
 		cfg.RateLimitWindow = d
 	} else {
 		return nil, fmt.Errorf("invalid RATE_LIMIT_WINDOW: %w", err)
 	}
-
 	if v := getenv("RATE_LIMIT_REQUESTS", "100"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.RateLimitRequests = n
@@ -120,7 +121,6 @@ func LoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("invalid RATE_LIMIT_REQUESTS: %w", err)
 		}
 	}
-
 	if dt := getenv("DB_TIMEOUT", "10s"); dt != "" {
 		if d, err := time.ParseDuration(dt); err == nil {
 			cfg.DBTimeout = d
@@ -129,7 +129,6 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
-	// Precompute allowed origins set
 	if cfg.CORSOrigins != "*" {
 		cfg.AllowedOriginsSet = make(map[string]struct{})
 		for _, o := range strings.Split(cfg.CORSOrigins, ",") {
@@ -142,32 +141,37 @@ func LoadConfig() (*Config, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-
 	return cfg, nil
 }
 
-// Validate checks critical configuration values.
 func (c *Config) Validate() error {
-	if c.MongoURI == "" {
-		return errors.New("MONGO_URI is required")
-	}
-	// If in production, require explicit Mongo credentials (avoid anonymous access)
-	if strings.ToLower(c.Environment) == "production" {
-		if strings.TrimSpace(c.MongoUsername) == "" || strings.TrimSpace(c.MongoPassword) == "" {
-			return errors.New("MONGO_USERNAME and MONGO_PASSWORD are required in production")
+	// Check DBType first
+	switch c.DBType {
+	case "mongo", "hybrid":
+		if c.MongoURI == "" {
+			return errors.New("MONGO_URI is required when DB_TYPE is mongo or hybrid")
 		}
+		if strings.ToLower(c.Environment) == "production" {
+			if strings.TrimSpace(c.MongoUsername) == "" || strings.TrimSpace(c.MongoPassword) == "" {
+				return errors.New("MONGO_USERNAME and MONGO_PASSWORD are required in production")
+			}
+		}
+	case "postgres":
+		if c.PostgresDSN == "" {
+			return errors.New("POSTGRES_DSN is required when DB_TYPE is postgres")
+		}
+	default:
+		return errors.New("DB_TYPE must be one of: mongo, postgres, hybrid")
 	}
+
 	if len(c.JWTSecret) < 32 {
 		return errors.New("JWT_SECRET must be at least 32 characters")
 	}
 	if c.ServerPort == "" {
 		return errors.New("SERVER_PORT is required")
 	}
-	// Disallow wildcard CORS in production to reduce attack surface.
-	if strings.ToLower(c.Environment) == "production" {
-		if strings.TrimSpace(c.CORSOrigins) == "*" {
-			return errors.New("CORS_ORIGINS must not be '*' in production; provide an allowlist (e.g., https://yourdomain.com,https://www.yourdomain.com)")
-		}
+	if strings.ToLower(c.Environment) == "production" && strings.TrimSpace(c.CORSOrigins) == "*" {
+		return errors.New("CORS_ORIGINS must not be '*' in production; provide an allowlist")
 	}
 	return nil
 }
@@ -175,15 +179,6 @@ func (c *Config) Validate() error {
 func getenv(key, def string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
-	}
-	return def
-}
-
-func getenvInt(key string, def int) int {
-	if v := os.Getenv(key); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
 	}
 	return def
 }

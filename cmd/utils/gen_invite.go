@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"os"
 	"time"
 
-	"github.com/835-droid/ms-ai-backend/internal/core/user" // الـ Struct الذي يستخدمه الـ Repo
-	"github.com/835-droid/ms-ai-backend/internal/data/mongo"
-	datauser "github.com/835-droid/ms-ai-backend/internal/data/user" // تأكد من المسار
+	"github.com/835-droid/ms-ai-backend/internal/container"
+	"github.com/835-droid/ms-ai-backend/internal/core/user"
 	"github.com/835-droid/ms-ai-backend/pkg/config"
 	plog "github.com/835-droid/ms-ai-backend/pkg/logger"
 
@@ -16,22 +15,50 @@ import (
 )
 
 func main() {
+	fmt.Println("Starting gen_invite...")
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: go run ./cmd/utils/gen_invite.go <code>")
+		os.Exit(1)
+	}
+	code := os.Args[1]
+
+	fmt.Printf("Code: %s\n", code)
+
+	fmt.Println("Before LoadConfig")
 	// 1. إعدادات الاتصال
-	cfg, _ := config.LoadConfig()
-	logger := plog.NewLogger(cfg.LogLevel, cfg.Environment, nil)
-	store, err := mongo.NewMongoStore(cfg, logger)
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("❌ فشل الاتصال: %v", err)
+		fmt.Printf("Error loading config: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("After LoadConfig")
+	logger := plog.NewLogger(cfg.LogLevel, cfg.Environment, nil)
+
+	fmt.Printf("DB_TYPE: %s\n", cfg.DBType)
+	fmt.Printf("POSTGRES_DSN: %s\n", cfg.PostgresDSN)
+
+	// Check for DEV_NO_DB
+	if os.Getenv("DEV_NO_DB") == "1" {
+		fmt.Println("DEV_NO_DB mode: skipping database operations")
+		fmt.Printf("✅ تم إنشاء الكود بنجاح (simulated): %s\n", code)
+		fmt.Println("End")
+		return
 	}
 
-	// 2. الوصول المباشر للـ Repository لتجنب تعارض الـ Interface
-	userRepo := datauser.NewMongoUserRepository(store)
+	// Initialize databases based on DB_TYPE
+	mStore, pStore, err := container.InitializeDatabases(cfg, logger)
+	if err != nil {
+		fmt.Printf("Error initializing databases: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Initialize repositories
+	repos := container.InitializeRepositories(cfg, logger, mStore, pStore)
 	ctx := context.Background()
 
-	fmt.Println("--- إنشاء رمز دعوة (تجاوز تعارض الأنواع) ---")
-	fmt.Print(" (8خانات على الاقل)أدخل الرمز: ")
-	var code string
-	fmt.Scanln(&code)
+	fmt.Printf("User repo type: %T\n", repos.User)
+
+	fmt.Println("--- إنشاء رمز دعوة ---")
 
 	// 3. بناء الكائن باستخدام النوع الذي يفهمه الـ userRepo
 	newInvite := &user.InviteCode{
@@ -44,10 +71,13 @@ func main() {
 	}
 
 	// 4. الحفظ المباشر
-	err = userRepo.CreateInvite(ctx, newInvite)
+	err = repos.User.CreateInvite(ctx, newInvite)
 	if err != nil {
-		log.Fatalf("❌ فشل الحفظ: %v", err)
+		fmt.Printf("Error creating invite: %v\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("✅ تم إنشاء الكود بنجاح: %s\n", code)
+	fmt.Println("End")
+	os.Exit(0)
 }

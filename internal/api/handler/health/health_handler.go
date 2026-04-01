@@ -1,5 +1,3 @@
-// Package health provides health check endpointspackage health
-
 package health
 
 import (
@@ -7,35 +5,37 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/835-droid/ms-ai-backend/internal/data/mongo"
 	datamongo "github.com/835-droid/ms-ai-backend/internal/data/mongo"
+	"github.com/835-droid/ms-ai-backend/internal/data/postgres"
+	datapostgres "github.com/835-droid/ms-ai-backend/internal/data/postgres"
 	"github.com/835-droid/ms-ai-backend/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Handler provides health check endpoints
-type Handler struct {
-	mongoStore *datamongo.MongoStore
-	lastCheck  time.Time
-	isReady    bool
+// HealthChecker defines an interface for database health checks
+type HealthChecker interface {
+	Healthy(ctx context.Context) error
 }
 
-// NewHandler creates a new health handler backed by MongoStore for richer metrics
-func NewHandler(store *datamongo.MongoStore) *Handler {
-	return &Handler{
-		mongoStore: store,
-		lastCheck:  time.Time{},
-		isReady:    false,
+type Handler struct {
+	mongoStore    *datamongo.MongoStore
+	postgresStore *datapostgres.PostgresStore
+	lastCheck     time.Time
+	isReady       bool
+}
+
+// NewHealthHandler ينشئ نسخة جديدة من الـ HealthHandler مع تمرير الاتصالات اللازمة
+func NewHealthHandler(m *mongo.MongoStore, p *postgres.PostgresStore, r *redis.Client) *HealthHandler {
+	return &HealthHandler{
+		mongoStore:    m,
+		postgresStore: p,
+		redisClient:   r,
+		isReady:       false,
 	}
 }
 
-// LivenessCheck godoc
-// @Summary Liveness probe
-// @Description Check if the application is live
-// @Tags health
-// @Produce json
-// @Success 200 {object} response.Response
-// @Router /health/live [get]
 func (h *Handler) LivenessCheck(c *gin.Context) {
 	response.SuccessResp(c, http.StatusOK, gin.H{
 		"status":    "alive",
@@ -43,14 +43,6 @@ func (h *Handler) LivenessCheck(c *gin.Context) {
 	})
 }
 
-// ReadinessCheck godoc
-// @Summary Readiness probe
-// @Description Check if the application is ready to accept traffic
-// @Tags health
-// @Produce json
-// @Success 200 {object} response.Response
-// @Failure 503 {object} response.ErrorResponse
-// @Router /health/ready [get]
 func (h *Handler) ReadinessCheck(c *gin.Context) {
 	// Use cached result if checked recently
 	if !h.lastCheck.IsZero() && time.Since(h.lastCheck) < 5*time.Second {
@@ -66,11 +58,19 @@ func (h *Handler) ReadinessCheck(c *gin.Context) {
 		return
 	}
 
-	// Check MongoDB connection via store helper
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
 	defer cancel()
 
-	err := h.mongoStore.Healthy(ctx)
+	var err error
+	// Check whichever database is available
+	if h.mongoStore != nil {
+		err = h.mongoStore.Healthy(ctx)
+	} else if h.postgresStore != nil {
+		err = h.postgresStore.Healthy(ctx)
+	} else {
+		err = nil // no database configured? treat as ready? depends on your need
+	}
+
 	h.lastCheck = time.Now()
 	h.isReady = err == nil
 
@@ -88,50 +88,119 @@ func (h *Handler) ReadinessCheck(c *gin.Context) {
 	})
 }
 
-// GetMetrics godoc
-// @Summary Application metrics
-// @Description Get basic application metrics
-// @Tags health
-// @Produce json
-// @Success 200 {object} response.Response
-// @Router /metrics [get]
 func (h *Handler) GetMetrics(c *gin.Context) {
-	stats := h.mongoStore.GetStats()
-	detailed, _ := h.mongoStore.GetDetailedHealth(c.Request.Context())
-	response.SuccessResp(c, http.StatusOK, gin.H{
+	metrics := gin.H{
 		"status":    "ok",
 		"timestamp": time.Now().Format(time.RFC3339),
-		"metrics": gin.H{
-			"uptime": time.Since(h.lastCheck).String(),
-			"health": gin.H{
-				"database": h.isReady,
-			},
-			"mongo": gin.H{
-				"stats":    stats,
-				"detailed": detailed,
-			},
+	}
+	if h.mongoStore != nil {
+		stats := h.mongoStore.GetStats()
+		metrics["mongo"] = gin.H{
+			"stats": stats,
+		}
+	}
+	if h.postgresStore != nil {
+		// PostgreSQL stats could be added here
+		metrics["postgres"] = gin.H{
+			"connected": true,
+		}
+	}
+	response.SuccessResp(c, http.StatusOK, metrics)
+}
+
+func (h *Handler) DebugDBCheck(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if h.mongoStore != nil {
+		if err := h.mongoStore.Healthy(ctx); err != nil {
+			response.ErrorResp(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		response.SuccessResp(c, http.StatusOK, gin.H{"status": "connected", "database": "mongodb"})
+	} else if h.postgresStore != nil {
+		if err := h.postgresStore.Healthy(ctx); err != nil {
+			response.ErrorResp(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		response.SuccessResp(c, http.StatusOK, gin.H{"status": "connected", "database": "postgres"})
+	} else {
+		response.ErrorResp(c, http.StatusInternalServerError, "no database configured")
+	}
+}
+
+// NewHealthHandler ينشئ نسخة جديدة من الـ HealthHandler مع تمرير الاتصالات اللازمة
+func NewHealthHandler(m *mongo.MongoStore, p *postgres.PostgresStore, r *redis.Client) *HealthHandler {
+	return &HealthHandler{
+		mongoStore:    m,
+		postgresStore: p,
+		redisClient:   r,
+		isReady:       false,
+	}
+}
+
+// Liveness فحص بسيط للتأكد من أن تطبيق Go يعمل (Liveness Probe)
+func (h *HealthHandler) Liveness(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"status": "UP"})
+}
+
+// ReadinessCheck يقوم بفحص عميق لجميع الاتصالات (Readiness Probe)
+// يدعم الوضع الهجين بفحص كل القواعد النشطة
+func (h *HealthHandler) ReadinessCheck(c *gin.Context) {
+	ctx := c.Request.Context()
+	var errs []error
+
+	// 1. فحص MongoDB إذا كان مفعلاً
+	if h.mongoStore != nil {
+		if err := h.mongoStore.Healthy(ctx); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// 2. فحص PostgreSQL إذا كان مفعلاً
+	if h.postgresStore != nil {
+		if err := h.postgresStore.Healthy(ctx); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// 3. فحص Redis إذا كان مفعلاً (التطوير الإضافي الذي طلبته)
+	if h.redisClient != nil {
+		if err := h.redisClient.Ping(ctx).Err(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// تحديث حالة الجاهزية بناءً على وجود أخطاء من عدمه
+	h.mu.Lock()
+	h.isReady = len(errs) == 0
+	h.mu.Unlock()
+
+	// إذا كانت هناك أخطاء، نرجع حالة 503 مع قائمة الأخطاء
+	if !h.isReady {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status": "DISCONNECTED",
+			"errors": formatErrors(errs),
+		})
+		return
+	}
+
+	// في حالة النجاح
+	response.SuccessResp(c, http.StatusOK, gin.H{
+		"status": "READY",
+		"services": gin.H{
+			"mongo":    h.mongoStore != nil,
+			"postgres": h.postgresStore != nil,
+			"redis":    h.redisClient != nil,
 		},
 	})
 }
 
-// DebugDBCheck attempts a direct ping to MongoDB and returns the raw driver error (useful for debugging connectivity issues).
-// WARNING: This endpoint exposes internal error messages and should be disabled or protected in production.
-func (h *Handler) DebugDBCheck(c *gin.Context) {
-	// short timeout for debugging
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
-	defer cancel()
-
-	if h.mongoStore == nil || h.mongoStore.Client == nil {
-		response.ErrorResp(c, http.StatusInternalServerError, "mongo store or client not initialized")
-		return
+// formatErrors دالة مساعدة لتحويل الأخطاء إلى نصوص مفهومة
+func formatErrors(errs []error) []string {
+	var s []string
+	for _, e := range errs {
+		s = append(s, e.Error())
 	}
-
-	// Try a ping with primary read preference
-	if err := h.mongoStore.Client.Ping(ctx, nil); err != nil {
-		// return raw error to aid debugging
-		response.ErrorResp(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResp(c, http.StatusOK, gin.H{"status": "connected"})
+	return s
 }

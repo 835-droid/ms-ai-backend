@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-AI | القارئ</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/reader.css">
+</head>
+<body>
+    <main class="reader-container">
+        <header class="reader-header">
+            <div class="reader-nav">
+                <div class="reader-title">
+                    <h1 id="reader-manga-title">القراءة</h1>
+                    <p id="reader-chapter-title"></p>
+                </div>
+                <div class="reader-actions">
+                    <select id="chapter-select" class="reader-select"></select>
+                    <button id="logout-button" class="btn btn-secondary">خروج</button>
+                </div>
+            </div>
+        </header>
+
+        <section class="reader-main">
+            <div id="reader-error" class="reader-error"></div>
+            <img id="reader-page-image" class="reader-image" alt="">
+        </section>
+
+        <footer class="reader-footer">
+            <div class="reader-controls">
+                <button id="prev-page-btn" class="btn btn-secondary">الصفحة السابقة</button>
+                <div id="page-counter" class="page-counter">0 / 0</div>
+                <button id="next-page-btn" class="btn btn-secondary">الصفحة التالية</button>
+            </div>
+        </footer>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/manga-reader.js"></script>   <!-- تم التعديل: من reader.js إلى manga-reader.js -->
+</body>
+</html>

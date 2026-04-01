@@ -32,5 +32,9 @@ func SetupAdminRoutes(engine *gin.Engine, adminHandler *admin.Handler, cfg *conf
 		// Metrics and monitoring
 		adminGroup.GET("/metrics", adminHandler.GetMetrics)
 		adminGroup.GET("/metrics/db", adminHandler.GetDBMetrics)
+
+		// Users management
+		adminGroup.GET("/users", adminHandler.ListUsers)
+		adminGroup.PUT("/users/:id/promote", adminHandler.PromoteUser)
 	}
 }

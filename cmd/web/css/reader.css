@@ -1,0 +1,247 @@
+/* reader.css - قارئ مانجا محسن مع وضع ليلي وتأثيرات */
+
+.reader-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    color: white;
+    font-family: var(--font-family);
+    overflow: hidden;
+    position: relative;
+    transition: background 0.3s ease;
+}
+
+.reader-header {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 100;
+    transition: all 0.3s;
+}
+
+.reader-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.reader-title h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+}
+
+.reader-title p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.reader-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.reader-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reader-select:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.reader-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow: auto;
+    position: relative;
+}
+
+.reader-error {
+    color: #ef4444;
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.1rem;
+}
+
+.reader-image {
+    max-width: 100%;
+    max-height: 85vh;
+    object-fit: contain;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.reader-image:hover {
+    transform: scale(1.01);
+}
+
+.reader-footer {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem 1rem;
+    z-index: 100;
+}
+
+.reader-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.page-counter {
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    min-width: 80px;
+    text-align: center;
+}
+
+/* وضع ليلي/نهاري */
+.reader-container.bg-white {
+    background: #f8f9fa;
+    color: #1f2937;
+}
+
+.reader-container.bg-white .reader-header,
+.reader-container.bg-white .reader-footer {
+    background: rgba(255, 255, 255, 0.95);
+    color: #1f2937;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.reader-container.bg-white .reader-title h1,
+.reader-container.bg-white .reader-title p {
+    color: #1f2937;
+}
+
+.reader-container.bg-white .reader-select {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: #1f2937;
+}
+
+.reader-container.bg-gray {
+    background: #6c757d;
+}
+
+.reader-container.bg-gray .reader-header,
+.reader-container.bg-gray .reader-footer {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* أزرار التحكم في القارئ */
+.reader-controls .btn {
+    padding: 0.6rem 1.2rem;
+    min-height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+.reader-controls .btn:hover:not(:disabled) {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: scale(1.02);
+}
+
+.reader-controls .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* تأثير انتقال الصفحة */
+@keyframes pageFade {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.reader-image {
+    animation: pageFade 0.3s ease-out;
+}
+
+/* شاشة كاملة */
+.reader-container:fullscreen {
+    background: #000;
+}
+
+.reader-container:fullscreen .reader-header,
+.reader-container:fullscreen .reader-footer {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+/* استجابة */
+@media (max-width: 768px) {
+    .reader-nav {
+        flex-direction: column;
+        text-align: center;
+        padding: 0.75rem;
+    }
+    .reader-actions {
+        width: 100%;
+        justify-content: center;
+    }
+    .reader-controls {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .reader-image {
+        max-height: 70vh;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .btn {
+        min-height: 48px;
+    }
+    .reader-image:hover {
+        transform: none;
+    }
+}
+
+@media print {
+    .reader-container {
+        background: white !important;
+        color: black !important;
+    }
+    .reader-header,
+    .reader-footer {
+        display: none !important;
+    }
+    .reader-image {
+        max-width: 100% !important;
+        box-shadow: none !important;
+    }
+}

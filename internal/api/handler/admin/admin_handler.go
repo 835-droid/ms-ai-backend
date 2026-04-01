@@ -88,3 +88,38 @@ func (h *Handler) GetDBMetrics(c *gin.Context) {
 	metrics := h.service.GetDBMetrics(c.Request.Context())
 	response.SuccessResp(c, http.StatusOK, metrics)
 }
+
+// ListUsers returns paginated list of all users
+func (h *Handler) ListUsers(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	users, total, err := h.service.ListUsers(c.Request.Context(), page, limit)
+	if err != nil {
+		response.InternalError(c, "failed to list users")
+		return
+	}
+
+	response.SuccessResp(c, http.StatusOK, gin.H{
+		"users": users,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
+}
+
+// PromoteUser makes a user admin
+func (h *Handler) PromoteUser(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		response.ValidationError(c, "user id required")
+		return
+	}
+
+	if err := h.service.PromoteToAdmin(c.Request.Context(), userID); err != nil {
+		response.InternalError(c, "failed to promote user")
+		return
+	}
+
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": "user promoted to admin"})
+}

@@ -50,6 +50,12 @@ func (h *Handler) SignUp(c *gin.Context) {
 		case errors.Is(err, core.ErrInvalidInviteCode):
 			response.Unauthorized(c, i18n.TContext(c, i18n.MsgInviteCodeInvalid))
 			return
+		case errors.Is(err, core.ErrInviteCodeUsed):
+			response.ErrorResp(c, http.StatusConflict, i18n.TContext(c, i18n.MsgInviteCodeUsed))
+			return
+		case errors.Is(err, core.ErrInviteCodeExpired):
+			response.ErrorResp(c, http.StatusBadRequest, i18n.TContext(c, i18n.MsgInviteCodeExpired))
+			return
 		case errors.Is(err, core.ErrInvalidInput):
 			response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationInvalidFormat))
 			return
@@ -58,6 +64,8 @@ func (h *Handler) SignUp(c *gin.Context) {
 			return
 		}
 	}
+
+	// ... (باقي الكود كما
 
 	response.SuccessResp(c, http.StatusCreated, gin.H{
 		"message":       i18n.TContext(c, i18n.MsgAuthSignupSuccess),

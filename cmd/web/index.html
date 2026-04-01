@@ -4,37 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MS-AI | تسجيل الدخول</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="auth-card">
-            <h2>MS-AI</h2>
-            <div class="message" id="auth-message"></div>
+    <main class="auth-shell">
+        <section class="auth-card">
+            <div class="brand">
+                <h1>MS-AI</h1>
+                <p>منصة المانجا الخاصة بك</p>
+            </div>
 
-            <form id="login-form">
-                <h3>تسجيل الدخول</h3>
-                <input type="text" id="login-username" placeholder="اسم المستخدم" required>
-                <input type="password" id="login-password" placeholder="كلمة المرور" required>
-                <button type="submit" id="login-button">دخول</button>
-                <p>
-                    <a href="#" id="show-signup">ليس لديك حساب؟ سجل الآن</a>
-                </p>
-            </form>
+            <div id="auth-message" class="message"></div>
 
-            <form id="signup-form" style="display: none;">
-                <h3>تسجيل حساب جديد</h3>
-                <input type="text" id="signup-username" placeholder="اسم المستخدم" required>
-                <input type="password" id="signup-password" placeholder="كلمة المرور" required>
-                <input type="text" id="signup-invite-code" placeholder="رمز الدعوة (Invite Code)" required>
-                <button type="submit" id="signup-button">تسجيل</button>
-                <p>
-                    <a href="#" id="show-login">لديك حساب؟ سجل الدخول</a>
-                </p>
-            </form>
-        </div>
-    </div>
-    
-    <script src="app.js"></script>
+            <div class="tabs">
+                <button type="button" id="tab-login" class="tab-button active">دخول</button>
+                <button type="button" id="tab-signup" class="tab-button">تسجيل</button>
+            </div>
+
+            <div id="login-panel" class="tab-content active">
+                <form id="login-form" class="form-grid">
+                    <div class="form-group">
+                        <label for="login-username">اسم المستخدم</label>
+                        <input id="login-username" type="text" autocomplete="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">كلمة المرور</label>
+                        <input id="login-password" type="password" autocomplete="current-password" required>
+                    </div>
+                    <button id="login-button" class="btn btn-primary" type="submit">دخول</button>
+                </form>
+            </div>
+
+            <div id="signup-panel" class="tab-content">
+                <form id="signup-form" class="form-grid">
+                    <div class="form-group">
+                        <label for="signup-username">اسم المستخدم</label>
+                        <input id="signup-username" type="text" autocomplete="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">كلمة المرور</label>
+                        <input id="signup-password" type="password" autocomplete="new-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-invite-code">رمز الدعوة</label>
+                        <input id="signup-invite-code" type="text" required>
+                    </div>
+                    <button id="signup-button" class="btn btn-primary" type="submit">تسجيل</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/login.js"></script>
 </body>
 </html>

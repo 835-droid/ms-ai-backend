@@ -177,9 +177,9 @@ func (h *MangaHandler) ListMangas(c *gin.Context) {
 // @Failure 400 {object} response.ErrorResponse "Invalid manga ID"
 // @Failure 404 {object} response.ErrorResponse "Manga not found"
 // @Failure 500 {object} response.ErrorResponse "Internal server error"
-// @Router /manga/{manga_id} [get]
+// @Router /manga/{mangaID} [get]
 func (h *MangaHandler) GetManga(c *gin.Context) {
-	id := c.Param("manga_id")
+	id := c.Param("mangaID")
 	if id == "" {
 		response.ValidationError(c, "manga id is required")
 		return
@@ -216,9 +216,9 @@ func (h *MangaHandler) GetManga(c *gin.Context) {
 // @Failure 401 {object} response.ErrorResponse "Unauthorized"
 // @Failure 403 {object} response.ErrorResponse "Forbidden"
 // @Failure 404 {object} response.ErrorResponse "Manga not found"
-// @Router /manga/{manga_id} [put]
+// @Router /manga/{mangaID} [put]
 func (h *MangaHandler) UpdateManga(c *gin.Context) {
-	id := c.Param("manga_id")
+	id := c.Param("mangaID")
 	if id == "" {
 		response.ValidationError(c, "manga id is required")
 		return
@@ -282,14 +282,14 @@ func (h *MangaHandler) UpdateManga(c *gin.Context) {
 // @Summary Delete a manga
 // @Description Delete an existing manga
 // @Produce json
-// @Param manga_id path string true "Manga ID"
+// @Param mangaID path string true "Manga ID"
 // @Success 204 "No Content"
 // @Failure 400 {object} response.ErrorResponse "Invalid manga ID"
 // @Failure 401 {object} response.ErrorResponse "Unauthorized"
 // @Failure 403 {object} response.ErrorResponse "Forbidden"
-// @Router /manga/{manga_id} [delete]
+// @Router /manga/{mangaID} [delete]
 func (h *MangaHandler) DeleteManga(c *gin.Context) {
-	id := c.Param("manga_id")
+	id := c.Param("mangaID")
 	if id == "" {
 		response.ValidationError(c, "manga id is required")
 		return

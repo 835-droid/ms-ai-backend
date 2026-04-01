@@ -1,4 +1,4 @@
-package data
+package manga
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// MongoMangaChapterRepository implements core.MangaChapterRepository backed by MongoDB.
+// MongoMangaChapterRepository implements coremanga.MangaChapterRepository backed by MongoDB.
 type MongoMangaChapterRepository struct {
 	store *datamongo.MongoStore
 	coll  *mongo.Collection
@@ -64,7 +64,6 @@ func (r *MongoMangaChapterRepository) CreateMangaChapter(ctx context.Context, ch
 			return corecommon.ErrInvalidInput
 		}
 
-		// Insert the chapter
 		res, err := r.coll.InsertOne(sessCtx, chapter)
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
@@ -102,23 +101,14 @@ func (r *MongoMangaChapterRepository) GetMangaChapterByID(ctx context.Context, i
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga_chapters", "read")
 	defer cancel()
 
-	r.store.Log.Debug("getting manga chapter", map[string]interface{}{
-		"id": id.Hex(),
-	})
-
 	var chapter coremanga.MangaChapter
 	err := r.coll.FindOne(ctx, bson.M{"_id": id}).Decode(&chapter)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, corecommon.ErrNotFound
 		}
-		r.store.Log.Error("get chapter failed", map[string]interface{}{
-			"id":    id.Hex(),
-			"error": err.Error(),
-		})
 		return nil, fmt.Errorf("find chapter by id: %w", err)
 	}
-
 	return &chapter, nil
 }
 
@@ -130,19 +120,12 @@ func (r *MongoMangaChapterRepository) ListMangaChaptersByManga(ctx context.Conte
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga_chapters", "read")
 	defer cancel()
 
-	r.store.Log.Debug("listing manga chapters", map[string]interface{}{
-		"manga_id": mangaID.Hex(),
-		"skip":     skip,
-		"limit":    limit,
-	})
-
 	filter := bson.M{"manga_id": mangaID}
 	opts := options.Find().
 		SetSkip(skip).
 		SetLimit(limit).
 		SetSort(bson.D{{Key: "number", Value: 1}})
 
-	// Get total count
 	total, err := r.coll.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, fmt.Errorf("count chapters: %w", err)
@@ -156,17 +139,8 @@ func (r *MongoMangaChapterRepository) ListMangaChaptersByManga(ctx context.Conte
 
 	var chapters []*coremanga.MangaChapter
 	if err := cur.All(ctx, &chapters); err != nil {
-		r.store.Log.Error("decode chapter list failed", map[string]interface{}{"error": err.Error()})
 		return nil, 0, fmt.Errorf("decode chapters: %w", err)
 	}
-
-	r.store.Log.Info("manga chapters listed", map[string]interface{}{
-		"count":    len(chapters),
-		"total":    total,
-		"manga_id": mangaID.Hex(),
-		"skip":     skip,
-		"limit":    limit,
-	})
 	return chapters, total, nil
 }
 
@@ -178,17 +152,9 @@ func (r *MongoMangaChapterRepository) UpdateMangaChapter(ctx context.Context, ch
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga_chapters", "write")
 	defer cancel()
 
-	r.store.Log.Debug("updating manga chapter", map[string]interface{}{
-		"id":       chapter.ID.Hex(),
-		"manga_id": chapter.MangaID.Hex(),
-		"title":    chapter.Title,
-		"number":   chapter.Number,
-	})
-
 	chapter.UpdatedAt = time.Now()
 
 	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		// Check if chapter number exists for this manga (except this chapter)
 		count, err := r.coll.CountDocuments(sessCtx, bson.M{
 			"_id":      bson.M{"$ne": chapter.ID},
 			"manga_id": chapter.MangaID,
@@ -201,7 +167,6 @@ func (r *MongoMangaChapterRepository) UpdateMangaChapter(ctx context.Context, ch
 			return corecommon.ErrInvalidInput
 		}
 
-		// Update the chapter
 		result, err := r.coll.ReplaceOne(sessCtx, bson.M{"_id": chapter.ID}, chapter)
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
@@ -212,7 +177,6 @@ func (r *MongoMangaChapterRepository) UpdateMangaChapter(ctx context.Context, ch
 		if result.MatchedCount == 0 {
 			return corecommon.ErrNotFound
 		}
-
 		return nil
 	}, nil)
 
@@ -223,13 +187,6 @@ func (r *MongoMangaChapterRepository) UpdateMangaChapter(ctx context.Context, ch
 		})
 		return err
 	}
-
-	r.store.Log.Info("manga chapter updated", map[string]interface{}{
-		"id":       chapter.ID.Hex(),
-		"manga_id": chapter.MangaID.Hex(),
-		"title":    chapter.Title,
-		"number":   chapter.Number,
-	})
 	return nil
 }
 
@@ -241,25 +198,12 @@ func (r *MongoMangaChapterRepository) DeleteMangaChapter(ctx context.Context, id
 	ctx, cancel := r.store.WithCollectionTimeout(ctx, "manga_chapters", "write")
 	defer cancel()
 
-	r.store.Log.Debug("deleting manga chapter", map[string]interface{}{
-		"id": id.Hex(),
-	})
-
 	result, err := r.coll.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
-		r.store.Log.Error("delete chapter failed", map[string]interface{}{
-			"id":    id.Hex(),
-			"error": err.Error(),
-		})
 		return fmt.Errorf("delete chapter: %w", err)
 	}
-
 	if result.DeletedCount == 0 {
 		return corecommon.ErrNotFound
 	}
-
-	r.store.Log.Info("manga chapter deleted", map[string]interface{}{
-		"id": id.Hex(),
-	})
 	return nil
 }

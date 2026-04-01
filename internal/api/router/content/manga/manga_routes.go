@@ -34,7 +34,7 @@ func SetupMangaRoutes(engine *gin.Engine, mangaHandler *manga.MangaHandler, chap
 			readLimit := middleware.RateLimitMiddlewareFromConfig(cfg, 0.50)
 			chapters.Use(readLimit)
 			chapters.GET("", chapterHandler.ListChapters)
-			chapters.GET("/:chapter_number", chapterHandler.GetChapter)
+			chapters.GET("/:chapterID", chapterHandler.GetChapter)
 
 			// Write operations - 25% rate limit
 			writeGroup := chapters.Group("")
@@ -42,8 +42,8 @@ func SetupMangaRoutes(engine *gin.Engine, mangaHandler *manga.MangaHandler, chap
 				writeGroup.Use(middleware.AuthMiddleware(cfg))
 				writeGroup.Use(writeLimit)
 				writeGroup.POST("", chapterHandler.CreateChapter)
-				writeGroup.PUT("/:chapter_number", chapterHandler.UpdateChapter)
-				writeGroup.DELETE("/:chapter_number", chapterHandler.DeleteChapter)
+				writeGroup.PUT("/:chapterID", chapterHandler.UpdateChapter)
+				writeGroup.DELETE("/:chapterID", chapterHandler.DeleteChapter)
 			}
 		}
 	}

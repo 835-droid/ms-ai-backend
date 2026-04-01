@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	defaultTimeout         = 10 * time.Second
+	defaultTimeout         = 16 * time.Second
 	DefaultLimit           = 50
-	connectTimeout         = 15 * time.Second
-	serverSelectionTimeout = 5 * time.Second
+	connectTimeout         = 22 * time.Second
+	serverSelectionTimeout = 8 * time.Second
 )
 
 var (

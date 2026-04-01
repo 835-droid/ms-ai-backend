@@ -1,4 +1,3 @@
-// internal/core/auth_service.go
 package auth
 
 import (
@@ -43,121 +42,6 @@ type DefaultAuthService struct {
 	log  *zerolog.Logger
 }
 
-// NewAuthService constructs a DefaultAuthService.
-func NewAuthService(repo coreuser.Repository, cfg *config.Config, log *zerolog.Logger) *DefaultAuthService {
-	if log == nil {
-		l := zerolog.Nop()
-		log = &l
-	}
-	return &DefaultAuthService{repo: repo, cfg: cfg, log: log}
-}
-
-// SignUp registers a user after validating invite code and credentials.
-func (s *DefaultAuthService) SignUp(ctx context.Context, username, password, inviteCode string) (*AuthResult, error) {
-	// normalize username to avoid case-sensitivity issues in login
-	username = strings.TrimSpace(strings.ToLower(username))
-
-	s.log.Debug().
-		Str("username", username).
-		Str("inviteCode", inviteCode).
-		Msg("attempting user signup")
-
-	if err := validator.ValidateUsername(username); err != nil {
-		s.log.Debug().
-			Str("username", username).
-			Err(err).
-			Msg("invalid username")
-		return nil, err
-	}
-	if err := validator.ValidatePassword(password); err != nil {
-		s.log.Debug().
-			Str("username", username).
-			Err(err).
-			Msg("invalid password")
-		return nil, err
-	}
-
-	existing, _ := s.repo.FindByUsername(ctx, username)
-	if existing != nil {
-		return nil, corecommon.ErrUserExists
-	}
-
-	invite, err := s.repo.FindCode(ctx, inviteCode)
-	if err != nil || invite == nil {
-		return nil, corecommon.ErrInvalidInviteCode
-	}
-
-	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		s.log.Error().
-			Str("username", username).
-			Err(err).
-			Msg("failed to hash password")
-		return nil, corecommon.ErrInternalServer
-	}
-
-	// 1. احصل على الرقم التسلسلي التالي
-	seq, _ := s.repo.GetNextSequence(ctx, "user_id_counter")
-
-	// 2. حوله لصيغة نصية جميلة
-	publicUserID := fmt.Sprintf("User-%d", seq)
-
-	newOID := primitive.NewObjectID() // توليد ID جديد هنا
-
-	now := time.Now()
-	newUser := &coreuser.User{
-		ID:        newOID,
-		UUID:      utils.GenerateUUID(),
-		UserID:    publicUserID,
-		Username:  username,
-		Password:  string(hashed),
-		IsActive:  true,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	newDetails := &coreuser.UserDetails{
-		UUID:      utils.GenerateUUID(),
-		UserID:    publicUserID,
-		Status:    "active",
-		Roles:     []string{"user"},
-		IsActive:  true,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-
-	// copy roles from details to user struct so that tokens generation works
-	newUser.Roles = newDetails.Roles
-
-	if err := s.repo.Create(ctx, newUser, newDetails); err != nil {
-		s.log.Error().
-			Str("username", username).
-			Err(err).
-			Msg("failed to create user")
-		return nil, err
-	}
-
-	// mark invite used (best effort; repository should support transactions)
-	if err := s.repo.UseCode(ctx, invite.ID, newUser.ID); err != nil {
-		s.log.Error().
-			Str("userId", newUser.ID.Hex()).
-			Str("inviteId", invite.ID.Hex()).
-			Err(err).
-			Msg("failed to mark invite code as used")
-	}
-
-	// generate tokens
-	access, err := s.generateAccessToken(newUser)
-	if err != nil {
-		return nil, corecommon.ErrInternalServer
-	}
-	refresh, err := s.generateAndStoreRefreshToken(ctx, newUser)
-	if err != nil {
-		return nil, corecommon.ErrInternalServer
-	}
-
-	return &AuthResult{User: newUser, AccessToken: access, RefreshToken: refresh}, nil
-}
-
 func (s *DefaultAuthService) Login(ctx context.Context, username, password string) (*AuthResult, error) {
 	// normalize username to avoid case-sensitivity issues
 	username = strings.TrimSpace(strings.ToLower(username))
@@ -165,6 +49,16 @@ func (s *DefaultAuthService) Login(ctx context.Context, username, password strin
 	u, err := s.repo.FindByUsername(ctx, username)
 	if err != nil {
 		s.log.Warn().Str("username", username).Err(err).Msg("login failed: user not found")
+		return nil, corecommon.ErrUserNotFound
+	}
+	if u == nil {
+		s.log.Warn().Str("username", username).Msg("login failed: user not found")
+		return nil, corecommon.ErrUserNotFound
+	}
+
+	// Check if user is active
+	if !u.IsActive {
+		s.log.Warn().Str("username", username).Msg("login failed: user is inactive")
 		return nil, corecommon.ErrInvalidCredentials
 	}
 
@@ -333,4 +227,131 @@ func (s *DefaultAuthService) generateAndStoreRefreshToken(ctx context.Context, u
 		Str("userId", u.ID.Hex()).
 		Msg("refresh token stored")
 	return t, nil
+}
+
+// NewAuthService constructs a DefaultAuthService.
+func NewAuthService(repo coreuser.Repository, cfg *config.Config, log *zerolog.Logger) *DefaultAuthService {
+	if log == nil {
+		l := zerolog.Nop()
+		log = &l
+	}
+	return &DefaultAuthService{repo: repo, cfg: cfg, log: log}
+}
+
+// SignUp registers a user after validating invite code and credentials.
+func (s *DefaultAuthService) SignUp(ctx context.Context, username, password, inviteCode string) (*AuthResult, error) {
+	// normalize username to avoid case-sensitivity issues in login
+	username = strings.TrimSpace(strings.ToLower(username))
+
+	s.log.Debug().
+		Str("username", username).
+		Str("inviteCode", inviteCode).
+		Msg("attempting user signup")
+
+	if err := validator.ValidateUsername(username); err != nil {
+		s.log.Debug().
+			Str("username", username).
+			Err(err).
+			Msg("invalid username")
+		return nil, err
+	}
+	if err := validator.ValidatePassword(password); err != nil {
+		s.log.Debug().
+			Str("username", username).
+			Err(err).
+			Msg("invalid password")
+		return nil, err
+	}
+
+	existing, _ := s.repo.FindByUsername(ctx, username)
+	if existing != nil {
+		return nil, corecommon.ErrUserExists
+	}
+
+	invite, err := s.repo.FindCode(ctx, inviteCode)
+	if err != nil || invite == nil {
+		return nil, corecommon.ErrInvalidInviteCode
+	}
+	// Check if invite is already used
+	if invite.IsUsed {
+		return nil, corecommon.ErrInviteCodeUsed
+	}
+	// Check expiry
+	if invite.ExpiresAt.Before(time.Now()) {
+		return nil, corecommon.ErrInviteCodeExpired
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		s.log.Error().
+			Str("username", username).
+			Err(err).
+			Msg("failed to hash password")
+		return nil, corecommon.ErrInternalServer
+	}
+
+	// 1. احصل على الرقم التسلسلي التالي
+	seq, err := s.repo.GetNextSequence(ctx, "user_id_counter")
+	if err != nil {
+		s.log.Warn().Err(err).Msg("failed to get next sequence, using fallback")
+		seq = 1 // fallback
+	}
+
+	// 2. حوله لصيغة نصية جميلة
+	publicUserID := fmt.Sprintf("User-%d", seq)
+
+	newOID := primitive.NewObjectID() // توليد ID جديد هنا
+
+	now := time.Now()
+	newUser := &coreuser.User{
+		ID:        newOID,
+		UUID:      utils.GenerateUUID(),
+		UserID:    publicUserID,
+		Username:  username,
+		Password:  string(hashed),
+		IsActive:  true,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	newDetails := &coreuser.UserDetails{
+		UUID:      utils.GenerateUUID(),
+		UserID:    publicUserID,
+		Status:    "active",
+		Roles:     []string{"user"},
+		IsActive:  true,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	// copy roles from details to user struct so that tokens generation works
+	newUser.Roles = newDetails.Roles
+
+	if err := s.repo.Create(ctx, newUser, newDetails); err != nil {
+		s.log.Error().
+			Str("username", username).
+			Err(err).
+			Msg("failed to create user")
+		return nil, err
+	}
+
+	// mark invite used (best effort; repository should support transactions)
+	if err := s.repo.UseCode(ctx, invite.ID, newUser.ID); err != nil {
+		s.log.Error().
+			Str("userId", newUser.ID.Hex()).
+			Str("inviteId", invite.ID.Hex()).
+			Err(err).
+			Msg("failed to mark invite code as used")
+	}
+
+	// generate tokens
+	access, err := s.generateAccessToken(newUser)
+	if err != nil {
+		return nil, corecommon.ErrInternalServer
+	}
+	refresh, err := s.generateAndStoreRefreshToken(ctx, newUser)
+	if err != nil {
+		return nil, corecommon.ErrInternalServer
+	}
+
+	return &AuthResult{User: newUser, AccessToken: access, RefreshToken: refresh}, nil
 }

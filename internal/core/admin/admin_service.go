@@ -1,23 +1,32 @@
+// internal/core/admin/admin_service.go
 package admin
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 	"github.com/835-droid/ms-ai-backend/pkg/utils"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
 )
 
-// DefaultAdminService is a concrete implementation of admin service using the package Repository
+// DefaultAdminService is a concrete implementation of admin service
 type DefaultAdminService struct {
-	repo Repository
-	log  *logger.Logger
+	repo     Repository
+	userRepo coreuser.Repository
+	log      *logger.Logger
 }
 
-func NewAdminService(repo Repository, log *logger.Logger) *DefaultAdminService {
-	return &DefaultAdminService{repo: repo, log: log}
+// NewAdminService creates a new admin service
+func NewAdminService(userRepo coreuser.Repository, repo Repository, log *logger.Logger) *DefaultAdminService {
+	return &DefaultAdminService{
+		repo:     repo,
+		userRepo: userRepo,
+		log:      log,
+	}
 }
 
 // GetMetrics returns admin metrics (placeholder)
@@ -67,10 +76,9 @@ func (s *DefaultAdminService) DeleteInviteCode(ctx context.Context, id string) e
 	return s.repo.DeleteInvite(ctx, id)
 }
 
-// تعديل في internal/core/admin/admin_service.go
+// CreateCustomInviteCode creates an invite code with a specific code string
 func (s *DefaultAdminService) CreateCustomInviteCode(ctx context.Context, code string, daysValid int) (*InviteCode, error) {
 	now := time.Now()
-	// إذا لم يتم تحديد أيام، نجعلها 30 يوماً بدلاً من يوم واحد
 	if daysValid <= 0 {
 		daysValid = 30
 	}
@@ -87,4 +95,41 @@ func (s *DefaultAdminService) CreateCustomInviteCode(ctx context.Context, code s
 		return nil, err
 	}
 	return inv, nil
+}
+
+// ListUsers returns a list of all users (for admin)
+func (s *DefaultAdminService) ListUsers(ctx context.Context, page, limit int) ([]*UserInfo, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	skip := int64((page - 1) * limit)
+
+	users, total, err := s.userRepo.FindAllUsers(ctx, skip, int64(limit))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	result := make([]*UserInfo, len(users))
+	for i, u := range users {
+		result[i] = &UserInfo{
+			ID:        u.ID.Hex(),
+			Username:  u.Username,
+			Roles:     u.Roles,
+			IsActive:  u.IsActive,
+			CreatedAt: u.CreatedAt,
+		}
+	}
+	return result, total, nil
+}
+
+// PromoteToAdmin promotes a user to admin role
+func (s *DefaultAdminService) PromoteToAdmin(ctx context.Context, userID string) error {
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+	return s.userRepo.UpdateUserRole(ctx, oid, "admin", true)
 }
