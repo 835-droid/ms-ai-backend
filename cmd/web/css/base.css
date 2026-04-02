@@ -1,0 +1,100 @@
+/* base.css: المتغيرات العامة وإعادة الضبط */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary: #8b5cf6;
+    --primary-dark: #7c3aed;
+    --primary-light: #a78bfa;
+    --primary-glow: rgba(139, 92, 246, 0.3);
+    --secondary: #10b981;
+    --secondary-dark: #059669;
+    --danger: #ef4444;
+    --danger-dark: #dc2626;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+
+    /* Reaction Colors */
+    --reaction-upvote: #3b82f6;
+    --reaction-upvote-light: rgba(59, 130, 246, 0.1);
+    --reaction-funny: #f59e0b;
+    --reaction-funny-light: rgba(245, 158, 11, 0.1);
+    --reaction-love: #ef4444;
+    --reaction-love-light: rgba(239, 68, 68, 0.1);
+    --reaction-surprised: #ec4899;
+    --reaction-surprised-light: rgba(236, 72, 153, 0.1);
+    --reaction-angry: #dc2626;
+    --reaction-angry-light: rgba(220, 38, 38, 0.1);
+    --reaction-sad: #8b5cf6;
+    --reaction-sad-light: rgba(139, 92, 246, 0.1);
+
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --border-light: #e2e8f0;
+    --border-medium: #cbd5e1;
+    --font-arabic: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-full: 9999px;
+
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: var(--font-arabic);
+    background: linear-gradient(135deg, #fef3c7 0%, #f1f5f9 50%, #e0e7ff 100%);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    direction: rtl;
+    padding-top: 70px;
+    transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+body.dark-mode {
+    --bg-primary: #1e293b;
+    --bg-secondary: #0f172a;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --border-light: #334155;
+    --border-medium: #475569;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #1e293b;
+        --bg-secondary: #0f172a;
+        --bg-tertiary: #334155;
+        --text-primary: #f1f5f9;
+        --text-secondary: #cbd5e1;
+        --text-muted: #94a3b8;
+        --border-light: #334155;
+        --border-medium: #475569;
+    }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-tertiary); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb { background: var(--primary); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }

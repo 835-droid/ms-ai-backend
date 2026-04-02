@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MS-AI | الملف الشخصي</title>
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/modern.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/manga.css" />
+    <link rel="stylesheet" href="css/animations.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="navbar-brand"><i class="fas fa-book"></i> MS-AI</a>
+        <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
+        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> المكتبة</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li><li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li></ul>
+        <div class="navbar-right"><button class="dark-mode-toggle"></button><div class="navbar-user-badge"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></div></div>
+    </nav>
+
+    <main class="page-shell">
+        <section class="page-card">
+            <div class="page-header">
+                <div>
+                    <h1>الملف الشخصي</h1>
+                    <p>إدارة بيانات الحساب وتغيير كلمة المرور</p>
+                </div>
+                <div class="header-actions">
+                    <a href="control.html" class="btn btn-secondary">العودة</a>
+                    <button id="logout-button" class="btn btn-danger">تسجيل الخروج</button>
+                </div>
+            </div>
+
+            <div id="profile-info" class="profile-info">
+                <h2>بيانات الحساب</h2>
+                <div><strong>المستخدم:</strong> <span id="profile-username">--</span></div>
+                <div><strong>الأدوار:</strong> <span id="profile-roles">--</span></div>
+                <div><strong>رقم التعريف:</strong> <span id="profile-userid">--</span></div>
+            </div>
+
+            <section class="section-card">
+                <h2>تغيير كلمة المرور</h2>
+                <form id="change-password-form" class="form">
+                    <label for="current-password">كلمة المرور الحالية</label>
+                    <input id="current-password" type="password" required minlength="8" />
+
+                    <label for="new-password">كلمة المرور الجديدة</label>
+                    <input id="new-password" type="password" required minlength="8" />
+
+                    <button id="change-password-btn" class="btn btn-primary" type="submit">تغيير كلمة المرور</button>
+                </form>
+                <div id="password-message" class="message" style="display:none;"></div>
+            </section>
+
+            <section class="section-card" style="margin-top:1rem;">
+                <h2>الروابط السريعة</h2>
+                <a href="favorites.html" class="btn btn-secondary" style="margin-right:0.25rem;">عرض المفضلة</a>
+                <a href="dashboard.html" class="btn btn-secondary">عرض المكتبة</a>
+            </section>
+        </section>
+    </main>
+
+    <script src="js/config.js?v=20260402"></script>
+    <script src="js/auth.js?v=20260402"></script>
+    <script src="js/api.js?v=20260402"></script>
+    <script src="js/toast.js?v=20260402"></script>
+    <script src="js/common.js?v=20260402"></script>
+    <script src="js/profile.js?v=20260402"></script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/mongo/monitor.go -----
 package mongo
 
 import (
@@ -241,3 +242,5 @@ func (m *MongoMonitor) GetMetrics() MonitoringMetrics {
 		LatencyMs:         atomic.LoadInt64(&m.metrics.LatencyMs),
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/data/mongo/monitor.go -----

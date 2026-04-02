@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/handler/auth/auth_handler.go -----
 // Package auth provides authentication related handlerspackage auth
 
 package auth
@@ -228,3 +229,43 @@ func (h *Handler) Logout(c *gin.Context) {
 		"message": i18n.TContext(c, i18n.MsgAuthLogoutSuccess),
 	})
 }
+
+func (h *Handler) ChangePassword(c *gin.Context) {
+	v, ok := c.Get("user_id")
+	if !ok {
+		response.Unauthorized(c, i18n.TContext(c, i18n.MsgAuthAccessDenied))
+		return
+	}
+	uidStr, ok := v.(string)
+	if !ok {
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+		return
+	}
+
+	var req struct {
+		CurrentPassword string `json:"current_password" binding:"required"`
+		NewPassword     string `json:"new_password" binding:"required,min=8,max=72"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationInvalidFormat))
+		return
+	}
+
+	if err := h.Service.ChangePassword(c.Request.Context(), uidStr, req.CurrentPassword, req.NewPassword); err != nil {
+		switch {
+		case errors.Is(err, core.ErrInvalidCredentials):
+			response.Unauthorized(c, i18n.TContext(c, i18n.MsgAuthInvalidCredentials))
+			return
+		case errors.Is(err, core.ErrUserNotFound):
+			response.Unauthorized(c, i18n.TContext(c, i18n.MsgUserNotFound))
+			return
+		default:
+			response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+			return
+		}
+	}
+
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": "تم تغيير كلمة المرور بنجاح"})
+}
+
+// ----- END OF FILE: backend/MS-AI/internal/api/handler/auth/auth_handler.go -----

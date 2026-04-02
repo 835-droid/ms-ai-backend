@@ -1,4 +1,6 @@
-package postgres
+// ----- START OF FILE: backend/MS-AI/internal/data/admin/postgres_admin_repo.go -----
+// internal/data/admin/postgres_admin_repo.go
+package admin
 
 import (
 	"context"
@@ -6,18 +8,20 @@ import (
 	"errors"
 
 	"github.com/835-droid/ms-ai-backend/internal/core/admin"
+	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
+	"github.com/835-droid/ms-ai-backend/internal/data/postgres"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type adminRepository struct {
-	store *PostgresStore
+	store *postgres.PostgresStore
 }
 
-func NewAdminRepository(store *PostgresStore) admin.Repository {
+func NewPostgresAdminRepository(store *postgres.PostgresStore) admin.Repository {
 	return &adminRepository{store: store}
 }
 
-func (r *adminRepository) CreateInvite(ctx context.Context, invite *admin.InviteCode) error {
+func (r *adminRepository) CreateInvite(ctx context.Context, invite *coreuser.InviteCode) error {
 	query := `INSERT INTO invite_codes (id, code, is_used, used_by, expires_at, created_at)
 	          VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := r.store.DB.ExecContext(ctx, query,
@@ -31,7 +35,7 @@ func (r *adminRepository) CreateInvite(ctx context.Context, invite *admin.Invite
 	return err
 }
 
-func (r *adminRepository) ListInvites(ctx context.Context, skip, limit int64) ([]*admin.InviteCode, int64, error) {
+func (r *adminRepository) ListInvites(ctx context.Context, skip, limit int64) ([]*coreuser.InviteCode, int64, error) {
 	var total int64
 	err := r.store.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM invite_codes`).Scan(&total)
 	if err != nil {
@@ -46,9 +50,9 @@ func (r *adminRepository) ListInvites(ctx context.Context, skip, limit int64) ([
 	}
 	defer rows.Close()
 
-	var invites []*admin.InviteCode
+	var invites []*coreuser.InviteCode
 	for rows.Next() {
-		var inv admin.InviteCode
+		var inv coreuser.InviteCode
 		var idStr string
 		var usedByNull sql.NullString
 		err := rows.Scan(&idStr, &inv.Code, &inv.IsUsed, &usedByNull, &inv.ExpiresAt, &inv.CreatedAt)
@@ -80,3 +84,5 @@ func (r *adminRepository) DeleteInvite(ctx context.Context, id string) error {
 	}
 	return nil
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/data/admin/postgres_admin_repo.go -----

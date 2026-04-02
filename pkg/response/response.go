@@ -1,8 +1,10 @@
+// ----- START OF FILE: backend/MS-AI/pkg/response/response.go -----
 package response
 
 import (
 	"net/http"
 
+	"github.com/835-droid/ms-ai-backend/pkg/errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +18,6 @@ type Response struct {
 }
 
 func write(c *gin.Context, status int, resp Response) {
-	// attach request id if present
 	if rid, ok := c.Get("request_id"); ok {
 		if s, ok := rid.(string); ok {
 			resp.RequestID = s
@@ -52,3 +53,13 @@ func NotFound(c *gin.Context, message string) {
 func InternalError(c *gin.Context, message string) {
 	ErrorResp(c, http.StatusInternalServerError, message)
 }
+
+// DomainError translates a domain error into a standard HTTP response
+func DomainError(c *gin.Context, err *errors.DomainError) {
+	if err == nil {
+		return
+	}
+	write(c, err.HTTPStatus, Response{Success: false, Error: err.Message, Code: string(err.Code)})
+}
+
+// ----- END OF FILE: backend/MS-AI/pkg/response/response.go -----

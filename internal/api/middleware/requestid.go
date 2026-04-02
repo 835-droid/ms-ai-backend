@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/middleware/requestid.go -----
 package middleware
 
 import (
@@ -24,3 +25,5 @@ func GetRequestID(c *gin.Context) string {
 	}
 	return ""
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/middleware/requestid.go -----

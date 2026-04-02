@@ -4,9 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MS-AI | لوحة التحكم</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/modern.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/manga.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <nav class="navbar">
+        <a href="control.html" class="navbar-brand"><i class="fas fa-book"></i> MS-AI</a>
+        <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
+        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> المكتبة</a></li><li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li></ul>
+        <div class="navbar-right"><button class="dark-mode-toggle"></button><div class="navbar-user-badge"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></div></div>
+    </nav>
+
     <main class="page-shell">
         <section class="page-card">
             <div class="page-header">
@@ -19,7 +32,7 @@
 
             <div class="quick-links">
                 <a href="dashboard.html" class="feature-link">
-                    <span>📚</span>
+                    <i class="fas fa-book-open"></i>
                     <div>
                         <strong>تصفح المانجا</strong>
                         <small>عرض المكتبة والفصول</small>
@@ -27,36 +40,37 @@
                 </a>
 
                 <a id="admin-link" href="admin.html" class="feature-link" style="display:none;">
-                    <span>⚙️</span>
+                    <i class="fas fa-sliders-h"></i>
                     <div>
                         <strong>لوحة الإدارة</strong>
                         <small>إضافة وإدارة المحتوى</small>
                     </div>
                 </a>
 
-                <div class="feature-link muted">
-                    <span>👤</span>
+                <a href="profile.html" class="feature-link">
+                    <i class="fas fa-user-circle"></i>
                     <div>
                         <strong>الملف الشخصي</strong>
-                        <small>قريباً</small>
+                        <small>تحكم في حسابك</small>
                     </div>
-                </div>
+                </a>
 
-                <div class="feature-link muted">
-                    <span>⭐</span>
+                <a href="favorites.html" class="feature-link">
+                    <i class="fas fa-heart"></i>
                     <div>
                         <strong>المفضلة</strong>
-                        <small>قريباً</small>
+                        <small>المانجا التي أعجبتك</small>
                     </div>
-                </div>
+                </a>
             </div>
         </section>
     </main>
 
-    <script src="js/config.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/control.js"></script>
+    <script src="js/config.js?v=20260401"></script>
+    <script src="js/auth.js?v=20260401"></script>
+    <script src="js/api.js?v=20260401"></script>
+    <script src="js/common.js?v=20260401"></script>
+    <script src="js/toast.js?v=20260401"></script>
+    <script src="js/control.js?v=20260401"></script>
 </body>
 </html>

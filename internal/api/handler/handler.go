@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/handler/handler.go -----
 package handler
 
 import (
@@ -39,3 +40,5 @@ func NewMangaHandler(s coremanga.MangaService) *manga.MangaHandler {
 func NewMangaChapterHandler(s coremanga.MangaChapterService) *manga.MangaChapterHandler {
 	return manga.NewMangaChapterHandler(s)
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/handler/handler.go -----

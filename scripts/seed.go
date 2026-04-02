@@ -53,13 +53,17 @@ func main() {
 		adminUser := &coreuser.User{
 			Username: adminName,
 			Password: string(hashedPass),
-			Roles:    []string{"admin"},
-			IsActive: true,
+			UserBase: coreuser.UserBase{
+				Roles:    coreuser.Roles{coreuser.RoleAdmin},
+				IsActive: true,
+			},
 		}
 		adminDetails := &coreuser.UserDetails{
-			Roles:    []string{"admin"},
-			IsActive: true,
-			Status:   "active",
+			UserBase: coreuser.UserBase{
+				Roles:    coreuser.Roles{coreuser.RoleAdmin},
+				IsActive: true,
+			},
+			Status: "active",
 		}
 		if err := repos.User.Create(ctx, adminUser, adminDetails); err != nil {
 			fmt.Printf("failed to create admin user: %v\n", err)

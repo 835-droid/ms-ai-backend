@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/mongo/transaction.go -----
 package mongo
 
 import (
@@ -154,3 +155,4 @@ func IsRetryableError(err error) bool {
 
 // Contains is a simple helper function (يجب أن يكون موجوداً في مكان ما داخل الحزمة)
 // NOTE: helper functions removed as they were unused; expand IsRetryableError if driver-specific checks are needed.
+// ----- END OF FILE: backend/MS-AI/internal/data/mongo/transaction.go -----

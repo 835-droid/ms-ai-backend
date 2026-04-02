@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/core/admin/service.go -----
 // internal/core/admin/service.go
 package admin
 
@@ -8,19 +9,23 @@ import (
 	"fmt"
 	"time"
 
+	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
+
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Service provides admin functionality
 type Service interface {
-	CreateInviteCode(ctx context.Context, length int) (*InviteCode, error)
-	CreateCustomInviteCode(ctx context.Context, code string, daysValid int) (*InviteCode, error)
-	ListInviteCodes(ctx context.Context, skip, limit int64) ([]*InviteCode, int64, error)
+	CreateInviteCode(ctx context.Context, length int) (*coreuser.InviteCode, error)
+	CreateCustomInviteCode(ctx context.Context, code string, daysValid int) (*coreuser.InviteCode, error)
+	ListInviteCodes(ctx context.Context, skip, limit int64) ([]*coreuser.InviteCode, int64, error)
 	DeleteInviteCode(ctx context.Context, id string) error
 	GetMetrics(ctx context.Context) map[string]interface{}
 	GetDBMetrics(ctx context.Context) map[string]interface{}
 	ListUsers(ctx context.Context, page, limit int) ([]*UserInfo, int64, error)
 	PromoteToAdmin(ctx context.Context, userID string) error
+	DeactivateUser(ctx context.Context, userID string) error
+	DeleteUser(ctx context.Context, userID string) error
 }
 
 // UserInfo represents user data for admin panel
@@ -37,18 +42,8 @@ type AdminService struct {
 	repo Repository
 }
 
-// InviteCode represents an invite code
-type InviteCode struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Code      string             `bson:"code" json:"code"`
-	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
-	ExpiresAt time.Time          `bson:"expires_at" json:"expires_at"`
-	IsUsed    bool               `bson:"is_used" json:"is_used"`
-	UsedBy    primitive.ObjectID `bson:"used_by,omitempty" json:"used_by,omitempty"`
-}
-
 // CreateInviteCode generates a random invite code
-func (s *AdminService) CreateInviteCode(ctx context.Context, length int) (*InviteCode, error) {
+func (s *AdminService) CreateInviteCode(ctx context.Context, length int) (*coreuser.InviteCode, error) {
 	if length <= 0 {
 		length = 12
 	}
@@ -59,7 +54,7 @@ func (s *AdminService) CreateInviteCode(ctx context.Context, length int) (*Invit
 	code := base64.RawURLEncoding.EncodeToString(buf)[:length]
 
 	now := time.Now()
-	invite := &InviteCode{
+	invite := &coreuser.InviteCode{
 		Code:      code,
 		CreatedAt: now,
 		ExpiresAt: now.Add(24 * time.Hour),
@@ -72,12 +67,12 @@ func (s *AdminService) CreateInviteCode(ctx context.Context, length int) (*Invit
 }
 
 // CreateCustomInviteCode creates an invite code with a specific code string
-func (s *AdminService) CreateCustomInviteCode(ctx context.Context, code string, daysValid int) (*InviteCode, error) {
+func (s *AdminService) CreateCustomInviteCode(ctx context.Context, code string, daysValid int) (*coreuser.InviteCode, error) {
 	now := time.Now()
 	if daysValid <= 0 {
 		daysValid = 30
 	}
-	invite := &InviteCode{
+	invite := &coreuser.InviteCode{
 		ID:        primitive.NewObjectID(),
 		Code:      code,
 		CreatedAt: now,
@@ -91,7 +86,7 @@ func (s *AdminService) CreateCustomInviteCode(ctx context.Context, code string, 
 }
 
 // ListInviteCodes returns paginated invite codes
-func (s *AdminService) ListInviteCodes(ctx context.Context, skip, limit int64) ([]*InviteCode, int64, error) {
+func (s *AdminService) ListInviteCodes(ctx context.Context, skip, limit int64) ([]*coreuser.InviteCode, int64, error) {
 	return s.repo.ListInvites(ctx, skip, limit)
 }
 
@@ -113,3 +108,5 @@ func (s *AdminService) GetDBMetrics(ctx context.Context) map[string]interface{} 
 		"status": "connected",
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/core/admin/service.go -----

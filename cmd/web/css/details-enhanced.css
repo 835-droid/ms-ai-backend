@@ -1,0 +1,762 @@
+/* details-enhanced.css - تحسينات متقدمة لصفحة التفاصيل */
+
+/* Reaction Bar & Picker */
+.reaction-bar {
+    position: relative;
+    display: inline-block;
+}
+
+.reaction-bar-btn {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-full);
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+.reaction-bar-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    filter: brightness(1.1);
+}
+
+.reaction-bar-btn.has-reaction {
+    background: linear-gradient(135deg, var(--reaction-love), var(--danger-dark));
+}
+
+.reaction-picker {
+    position: absolute;
+    bottom: 100%;
+    right: -10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 0.75rem;
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    box-shadow: var(--shadow-xl);
+    z-index: 100;
+    margin-bottom: 0.5rem;
+    animation: slideUp 0.2s ease-out;
+}
+
+.reaction-picker.active {
+    display: grid;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.reaction-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    background: var(--bg-tertiary);
+    border: 2px solid transparent;
+    font-size: 1.5rem;
+}
+
+.reaction-option:hover {
+    transform: scale(1.15) translateY(-5px);
+    background: var(--bg-secondary);
+}
+
+.reaction-option[data-type="upvote"] {
+    border-color: var(--reaction-upvote);
+}
+
+.reaction-option[data-type="funny"] {
+    border-color: var(--reaction-funny);
+}
+
+.reaction-option[data-type="love"] {
+    border-color: var(--reaction-love);
+}
+
+.reaction-option[data-type="surprised"] {
+    border-color: var(--reaction-surprised);
+}
+
+.reaction-option[data-type="angry"] {
+    border-color: var(--reaction-angry);
+}
+
+.reaction-option[data-type="sad"] {
+    border-color: var(--reaction-sad);
+}
+
+.reaction-option-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.reaction-option-tooltip {
+    position: absolute;
+    bottom: 100%;
+    right: 50%;
+    transform: translateX(50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    pointer-events: none;
+    display: none;
+    z-index: 101;
+}
+
+.reaction-option:hover .reaction-option-tooltip {
+    display: block;
+}
+
+/* Reaction Counts Row */
+.reaction-counts-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    min-height: 50px;
+}
+
+.reaction-count-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    background: var(--bg-primary);
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 2px solid transparent;
+    transition: all var(--transition-fast);
+    cursor: pointer;
+}
+
+.reaction-count-item[data-type="upvote"] {
+    border-color: var(--reaction-upvote);
+    color: var(--reaction-upvote);
+}
+
+.reaction-count-item[data-type="funny"] {
+    border-color: var(--reaction-funny);
+    color: var(--reaction-funny);
+}
+
+.reaction-count-item[data-type="love"] {
+    border-color: var(--reaction-love);
+    color: var(--reaction-love);
+}
+
+.reaction-count-item[data-type="surprised"] {
+    border-color: var(--reaction-surprised);
+    color: var(--reaction-surprised);
+}
+
+.reaction-count-item[data-type="angry"] {
+    border-color: var(--reaction-angry);
+    color: var(--reaction-angry);
+}
+
+.reaction-count-item[data-type="sad"] {
+    border-color: var(--reaction-sad);
+    color: var(--reaction-sad);
+}
+
+.reaction-count-item:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.reaction-count-emoji {
+    font-size: 1.1rem;
+}
+
+.reaction-empty-state {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+/* قسم الإحصائيات المتقدمة */
+.advanced-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+    margin: 1.5rem 0;
+}
+
+.stat-card-enhanced {
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-primary));
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    border: 1px solid var(--border-light);
+    transition: transform 0.2s;
+}
+
+.stat-card-enhanced:hover {
+    transform: translateY(-3px);
+}
+
+.stat-card-enhanced i {
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.stat-number {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* تقييم بالنجوم التفاعلي */
+.rating-stars {
+    display: flex;
+    gap: 0.25rem;
+    direction: ltr;
+    justify-content: center;
+}
+
+.star {
+    font-size: 1.75rem;
+    cursor: pointer;
+    color: #cbd5e1;
+    transition: color 0.1s, transform 0.1s;
+}
+
+.star.active, .star.hover {
+    color: #fbbf24;
+    text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+}
+
+.star:active {
+    transform: scale(0.9);
+}
+
+.rating-average {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-right: 0.5rem;
+}
+
+/* أزرار المشاركة */
+.share-buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+}
+
+.share-btn {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-full);
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.share-btn.twitter { background: #1DA1F2; color: white; }
+.share-btn.facebook { background: #4267B2; color: white; }
+.share-btn.whatsapp { background: #25D366; color: white; }
+.share-btn.copy { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-light); }
+
+.share-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+/* زر متابعة القراءة */
+.resume-reading-btn {
+    background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-full);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0;
+    transition: all 0.2s;
+}
+
+.resume-reading-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(16,185,129,0.3);
+}
+
+/* قائمة الفصول المحسنة */
+.chapter-item-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+    border: 1px solid var(--border-light);
+}
+
+.chapter-item-enhanced:hover {
+    background: var(--bg-primary);
+    border-color: var(--primary);
+    transform: translateX(-4px);
+}
+
+.chapter-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.chapter-number {
+    font-weight: 800;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.chapter-title {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.chapter-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.chapter-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.read-progress {
+    width: 80px;
+    height: 4px;
+    background: var(--border-light);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.read-progress-fill {
+    height: 100%;
+    background: var(--primary);
+    width: 0%;
+    transition: width 0.3s;
+}
+
+/* معرض الصور */
+.gallery-thumbnails {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.gallery-thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.gallery-thumb:hover, .gallery-thumb.active {
+    border-color: var(--primary);
+    transform: scale(1.05);
+}
+
+/* مودال المعرض */
+.gallery-modal-content {
+    max-width: 90vw;
+    background: rgba(0,0,0,0.9);
+    padding: 0;
+}
+
+.gallery-carousel {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gallery-carousel img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+}
+
+.gallery-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: 0.2s;
+}
+
+.gallery-nav:hover {
+    background: var(--primary);
+}
+
+.gallery-nav.prev { left: 10px; }
+.gallery-nav.next { right: 10px; }
+
+.gallery-caption {
+    text-align: center;
+    padding: 0.75rem;
+    color: white;
+    background: rgba(0,0,0,0.7);
+}
+
+/* عنوان القسم */
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-right: 4px solid var(--primary);
+    padding-right: 1rem;
+}
+
+/* استجابة */
+@media (max-width: 768px) {
+    .advanced-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .chapter-item-enhanced {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    .chapter-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .share-buttons {
+        justify-content: center;
+    }
+}
+/* ========== تحميل الهياكل العظمية (Skeleton Loading) ========== */
+.skeleton { background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--border-light) 50%, var(--bg-secondary) 100%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-details { display: flex; gap: 2rem; flex-wrap: wrap; }
+.skeleton-cover { width: 280px; height: 380px; border-radius: var(--radius-lg); }
+.skeleton-info { flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+.skeleton-line { height: 20px; border-radius: 4px; }
+.skeleton-line.short { width: 60%; }
+
+
+
+
+
+
+/* =========================================
+   تنسيقات صفحة التفاصيل الجديدة (المطابقة للصور)
+   ========================================= */
+
+/* القسم العلوي (Hero Section) */
+.manga-hero-section {
+    display: flex;
+    gap: 2rem;
+    background: var(--bg-tertiary);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    margin-bottom: 2rem;
+}
+
+.manga-hero-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+}
+
+.manga-cover-wrapper img {
+    width: 100%;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    display: block;
+}
+
+.manga-stats-box {
+    display: flex;
+    justify-content: space-between;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.manga-stats-box .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.manga-stats-box .stat-item i {
+    font-size: 1.2rem;
+}
+
+.manga-stats-box .stat-item strong {
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+.manga-stats-box .stat-item small {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.manga-hero-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.manga-hero-content h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.manga-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.manga-tags .tag-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    padding: 0.4rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+}
+
+.manga-synopsis {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 2rem;
+    flex-grow: 1;
+    font-size: 0.95rem;
+}
+
+.manga-action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.manga-action-buttons .btn {
+    flex: 1;
+    min-width: 140px;
+    padding: 0.8rem;
+    font-size: 1rem;
+}
+
+.manga-action-buttons .btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+/* =========================================
+   نظام التفاعلات (المطابق للصورة الثانية)
+   ========================================= */
+.reactions-container-new {
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    border: 1px solid var(--border-light);
+}
+
+.reactions-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.reactions-header h3 {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin-bottom: 0.3rem;
+}
+
+.reactions-header .reactions-total {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.reactions-grid-new {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.reaction-item-new {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+    min-width: 60px;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+}
+
+.reaction-item-new:hover {
+    transform: translateY(-5px);
+}
+
+.reaction-item-new.active {
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.reaction-emoji-new {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.reaction-count-new {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.reaction-label-new {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+}
+
+/* =========================================
+   قائمة الفصول (المطابقة للصورة الأولى)
+   ========================================= */
+.chapters-section-wrapper {
+    background: var(--bg-tertiary);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+}
+
+.chapters-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.chapters-list-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.chapters-search-bar {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.chapters-search-bar i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+.chapters-search-bar input {
+    width: 100%;
+    padding: 0.8rem 2.5rem 0.8rem 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+}
+
+/* تجاوب التصميم مع الشاشات الصغيرة */
+@media (max-width: 768px) {
+    .manga-hero-section {
+        flex-direction: column;
+        align-items: center;
+    }
+    .manga-hero-sidebar {
+        width: 100%;
+        max-width: 320px;
+    }
+    .reactions-grid-new {
+        gap: 1rem;
+    }
+    .reaction-emoji-new {
+        font-size: 1.8rem;
+    }
+}

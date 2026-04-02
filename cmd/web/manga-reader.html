@@ -2,13 +2,123 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MS-AI | القارئ</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>MS-AI | القارئ المتقدم</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/manga.css">
+    <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/reader.css">
+    <style>
+        /* تحسينات إضافية للقارئ المطور */
+        .reader-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .page-selector-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 40px;
+        }
+        .page-selector-wrapper label {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        #page-selector {
+            width: auto;
+            min-width: 70px;
+            padding: 0.35rem 0.5rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .loading-spinner-sm {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-light);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .reader-image {
+            transition: opacity 0.3s ease;
+            max-width: 100%;
+            height: auto;
+        }
+        .reader-image.loading {
+            opacity: 0.5;
+        }
+        .progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            z-index: 1001;
+        }
+        .progress-bar-reader {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease;
+        }
+        .reader-tools {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .reader-webtoon-frame {
+            margin-bottom: 1rem;
+        }
+        .reader-webtoon-label {
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .reader-webtoon-page {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        #paged-mode-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            .reader-controls {
+                gap: 0.5rem;
+            }
+            .page-selector-wrapper label {
+                display: none;
+            }
+            .btn-sm-mobile {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <main class="reader-container">
+        <!-- شريط التقدم العلوي -->
+        <div class="progress-container" id="progress-container" style="display:none;">
+            <div class="progress-bar-reader" id="progress-bar-reader"></div>
+        </div>
+
         <header class="reader-header">
             <div class="reader-nav">
                 <div class="reader-title">
@@ -17,29 +127,59 @@
                 </div>
                 <div class="reader-actions">
                     <select id="chapter-select" class="reader-select"></select>
-                    <button id="logout-button" class="btn btn-secondary">خروج</button>
+                    <button id="toggle-view-mode-btn" class="btn btn-secondary" title="تبديل وضع العرض">📱 وضع الويب توون</button>
+                    <button id="fullscreen-btn" class="btn btn-secondary" title="ملء الشاشة (F)">⛶</button>
+                    <button id="theme-toggle-btn" class="btn btn-secondary" title="تبديل السمة">🌓</button>
+                    <button id="back-button" class="btn btn-secondary" title="العودة">🔙</button>
                 </div>
             </div>
         </header>
 
-        <section class="reader-main">
+        <section class="reader-main" id="reader-main">
             <div id="reader-error" class="reader-error"></div>
-            <img id="reader-page-image" class="reader-image" alt="">
+            
+            <!-- وضع الصفحات المنفردة -->
+            <div id="paged-mode-container" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <img id="reader-page-image" class="reader-image" alt="" style="max-width: 100%;">
+            </div>
+            
+            <!-- وضع الويب توون -->
+            <div id="reader-webtoon-pages" class="reader-webtoon-pages" hidden></div>
         </section>
 
         <footer class="reader-footer">
             <div class="reader-controls">
-                <button id="prev-page-btn" class="btn btn-secondary">الصفحة السابقة</button>
-                <div id="page-counter" class="page-counter">0 / 0</div>
-                <button id="next-page-btn" class="btn btn-secondary">الصفحة التالية</button>
+                <button id="first-page-btn" class="btn btn-secondary" title="أول صفحة (Home)">⏮</button>
+                <button id="prev-chapter-btn" class="btn btn-secondary" title="الفصل السابق (P)">◀ الفصل السابق</button>
+                <button id="prev-page-btn" class="btn btn-secondary" title="الصفحة السابقة (←)">◀</button>
+                
+                <div class="page-selector-wrapper">
+                    <label>الصفحة</label>
+                    <select id="page-selector" class="page-selector">
+                        <option value="0">1</option>
+                    </select>
+                    <span id="total-pages-badge" style="font-size:0.7rem;">/ 0</span>
+                </div>
+                
+                <button id="next-page-btn" class="btn btn-secondary" title="الصفحة التالية (→)">▶</button>
+                <button id="next-chapter-btn" class="btn btn-secondary" title="الفصل التالي (N)">الفصل التالي ▶</button>
+                <button id="last-page-btn" class="btn btn-secondary" title="آخر صفحة (End)">⏭</button>
             </div>
         </footer>
     </main>
 
-    <script src="js/config.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/manga-reader.js"></script>   <!-- تم التعديل: من reader.js إلى manga-reader.js -->
+    <script src="js/config.js?v=20260402"></script>
+    <script src="js/auth.js?v=20260402"></script>
+    <script src="js/api.js?v=20260402"></script>
+    <script src="js/common.js?v=20260402"></script>
+    <script src="js/toast.js?v=20260402"></script>
+
+    <script src="js/reader/reader-core.js"></script>
+    <script src="js/reader/reader-storage.js"></script>
+    <script src="js/reader/reader-image.js"></script>
+    <script src="js/reader/reader-ui.js"></script>
+    <script src="js/reader/reader-navigation.js"></script>
+    <script src="js/reader/reader-events.js"></script>
+    <script src="js/reader/manga-reader.js"></script>
 </body>
 </html>

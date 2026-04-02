@@ -1,3 +1,5 @@
+// ----- START OF FILE: backend/MS-AI/internal/container/types.go -----
+
 package container
 
 import (
@@ -31,3 +33,5 @@ type serviceBundle struct {
 	Manga   coremanga.MangaService
 	Chapter coremanga.MangaChapterService
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/container/types.go -----

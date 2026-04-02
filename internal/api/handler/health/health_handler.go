@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/handler/health/health_handler.go -----
 package health
 
 import (
@@ -125,3 +126,5 @@ func (h *Handler) DebugDBCheck(c *gin.Context) {
 		response.ErrorResp(c, http.StatusInternalServerError, "no database configured")
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/handler/health/health_handler.go -----

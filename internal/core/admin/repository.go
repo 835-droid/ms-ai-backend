@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/core/admin/repository.go -----
 // internal/core/admin/repository.go
 package admin
 
@@ -7,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,8 +18,8 @@ import (
 
 // Repository defines the interface for admin data operations
 type Repository interface {
-	CreateInvite(ctx context.Context, invite *InviteCode) error
-	ListInvites(ctx context.Context, skip, limit int64) ([]*InviteCode, int64, error)
+	CreateInvite(ctx context.Context, invite *coreuser.InviteCode) error
+	ListInvites(ctx context.Context, skip, limit int64) ([]*coreuser.InviteCode, int64, error)
 	DeleteInvite(ctx context.Context, id string) error
 }
 
@@ -34,7 +37,7 @@ func NewMongoRepository(db *mongo.Database) *MongoRepository {
 	}
 }
 
-func (r *MongoRepository) CreateInvite(ctx context.Context, invite *InviteCode) error {
+func (r *MongoRepository) CreateInvite(ctx context.Context, invite *coreuser.InviteCode) error {
 	if invite.ID.IsZero() {
 		invite.ID = primitive.NewObjectID()
 	}
@@ -55,7 +58,7 @@ func (r *MongoRepository) CreateInvite(ctx context.Context, invite *InviteCode) 
 	return nil
 }
 
-func (r *MongoRepository) ListInvites(ctx context.Context, skip, limit int64) ([]*InviteCode, int64, error) {
+func (r *MongoRepository) ListInvites(ctx context.Context, skip, limit int64) ([]*coreuser.InviteCode, int64, error) {
 	opts := options.Find().
 		SetSkip(skip).
 		SetLimit(limit).
@@ -67,7 +70,7 @@ func (r *MongoRepository) ListInvites(ctx context.Context, skip, limit int64) ([
 	}
 	defer cursor.Close(ctx)
 
-	var invites []*InviteCode
+	var invites []*coreuser.InviteCode
 	if err := cursor.All(ctx, &invites); err != nil {
 		return nil, 0, fmt.Errorf("failed to decode invite codes: %w", err)
 	}
@@ -94,3 +97,5 @@ func (r *MongoRepository) DeleteInvite(ctx context.Context, id string) error {
 	}
 	return nil
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/core/admin/repository.go -----

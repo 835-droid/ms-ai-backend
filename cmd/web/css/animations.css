@@ -1,0 +1,15 @@
+/* animations.css: المؤثرات الحركية */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes likeParticle { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-30px) scale(1.3); opacity: 0; } }
+
+.skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e1e1e1 37%, #f0f0f0 63%); background-size: 400% 100%; animation: shimmer 1.2s ease infinite; border-radius: var(--radius-md); }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+.fade-in { animation: fadeIn 0.4s ease forwards; }
+.spin { animation: spin 1s linear infinite; }
+.modal-active { animation: modalFadeIn 0.25s ease; }
+.like-particle { animation: likeParticle 0.75s cubic-bezier(0.22,1,0.36,1); }
+
+@keyframes confetti-pop { 0% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); } 100% { opacity: 0; transform: translateY(-100px) scale(0) rotate(360deg); } }

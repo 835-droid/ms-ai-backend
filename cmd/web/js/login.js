@@ -21,11 +21,11 @@ async function handleLoginSubmit(event) {
             body: JSON.stringify({ username, password })
         }, { skipAuth: true });
 
-        saveTokens(result.access_token, result.refresh_token);
+        saveSession(result.access_token, result.refresh_token, result.user || null);
         showMessage('success', 'تم تسجيل الدخول بنجاح', 'auth-message');
 
         setTimeout(() => {
-            window.location.href = '/web/control.html';
+            window.location.href = webPagePath('control.html');
         }, 700);
     } catch (error) {
         showMessage('error', error.message, 'auth-message');
@@ -65,11 +65,11 @@ async function handleSignupSubmit(event) {
             })
         }, { skipAuth: true });
 
-        saveTokens(result.access_token, result.refresh_token);
+        saveSession(result.access_token, result.refresh_token, result.user || null);
         showMessage('success', 'تم إنشاء الحساب بنجاح', 'auth-message');
 
         setTimeout(() => {
-            window.location.href = '/web/control.html';
+            window.location.href = webPagePath('control.html');
         }, 700);
     } catch (error) {
         showMessage('error', error.message, 'auth-message');
@@ -108,6 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tab-signup')?.addEventListener('click', () => switchAuthTab('signup'));
 
     if (hasAuthToken()) {
-        window.location.href = '/web/control.html';
+        window.location.href = webPagePath('control.html');
     }
 });

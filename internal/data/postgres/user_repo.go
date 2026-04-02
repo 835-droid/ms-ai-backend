@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/postgres/user_repo.go -----
 package postgres
 
 import (
@@ -6,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
+	core "github.com/835-droid/ms-ai-backend/internal/core/common"
 	"github.com/835-droid/ms-ai-backend/internal/core/user"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -35,14 +38,15 @@ func (r *userRepository) Create(ctx context.Context, u *user.User, details *user
 		return fmt.Errorf("marshal details roles: %w", err)
 	}
 
-	query := `INSERT INTO users (id, username, password, roles, is_active, created_at, updated_at, refresh_token, refresh_token_expires_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	query := `INSERT INTO users (id, username, password, roles, is_active, last_login_at, created_at, updated_at, refresh_token, refresh_token_expires_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 	_, err = tx.ExecContext(ctx, query,
 		u.ID.Hex(),
 		u.Username,
 		u.Password,
 		string(rolesJSON),
 		u.IsActive,
+		u.LastLoginAt,
 		u.CreatedAt,
 		u.UpdatedAt,
 		u.RefreshToken,
@@ -75,12 +79,13 @@ func (r *userRepository) FindByUsername(ctx context.Context, username string) (*
 	var idStr string
 	var refreshToken sql.NullString
 	var refreshExpiresAt sql.NullTime
+	var lastLoginAt sql.NullTime
 	var rolesStr string
 
-	query := `SELECT id, username, password, roles, is_active, created_at, updated_at, refresh_token, refresh_token_expires_at
+	query := `SELECT id, username, password, roles, is_active, last_login_at, created_at, updated_at, refresh_token, refresh_token_expires_at
 	          FROM users WHERE username = $1`
 	err := r.store.DB.QueryRowContext(ctx, query, username).Scan(
-		&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive,
+		&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive, &lastLoginAt,
 		&u.CreatedAt, &u.UpdatedAt, &refreshToken, &refreshExpiresAt,
 	)
 	if err != nil {
@@ -91,7 +96,10 @@ func (r *userRepository) FindByUsername(ctx context.Context, username string) (*
 	}
 	u.ID, _ = primitive.ObjectIDFromHex(idStr)
 	if err := json.Unmarshal([]byte(rolesStr), &u.Roles); err != nil {
-		u.Roles = []string{"user"}
+		u.Roles = user.FromStrings([]string{"user"})
+	}
+	if lastLoginAt.Valid {
+		u.LastLoginAt = &lastLoginAt.Time
 	}
 	if refreshToken.Valid {
 		u.RefreshToken = refreshToken.String
@@ -107,12 +115,13 @@ func (r *userRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*
 	var idStr string
 	var refreshToken sql.NullString
 	var refreshExpiresAt sql.NullTime
+	var lastLoginAt sql.NullTime
 	var rolesStr string
 
-	query := `SELECT id, username, password, roles, is_active, created_at, updated_at, refresh_token, refresh_token_expires_at
+	query := `SELECT id, username, password, roles, is_active, last_login_at, created_at, updated_at, refresh_token, refresh_token_expires_at
 	          FROM users WHERE id = $1`
 	err := r.store.DB.QueryRowContext(ctx, query, id.Hex()).Scan(
-		&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive,
+		&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive, &lastLoginAt,
 		&u.CreatedAt, &u.UpdatedAt, &refreshToken, &refreshExpiresAt,
 	)
 	if err != nil {
@@ -123,7 +132,10 @@ func (r *userRepository) FindByID(ctx context.Context, id primitive.ObjectID) (*
 	}
 	u.ID, _ = primitive.ObjectIDFromHex(idStr)
 	if err := json.Unmarshal([]byte(rolesStr), &u.Roles); err != nil {
-		u.Roles = []string{"user"}
+		u.Roles = user.FromStrings([]string{"user"})
+	}
+	if lastLoginAt.Valid {
+		u.LastLoginAt = &lastLoginAt.Time
 	}
 	if refreshToken.Valid {
 		u.RefreshToken = refreshToken.String
@@ -139,19 +151,30 @@ func (r *userRepository) Update(ctx context.Context, u *user.User) error {
 	if err != nil {
 		return fmt.Errorf("marshal roles: %w", err)
 	}
-	query := `UPDATE users SET username=$2, password=$3, roles=$4, is_active=$5, updated_at=$6, refresh_token=$7, refresh_token_expires_at=$8
+	query := `UPDATE users SET username=$2, password=$3, roles=$4, is_active=$5, last_login_at=$6, updated_at=$7, refresh_token=$8, refresh_token_expires_at=$9
 	          WHERE id=$1`
-	_, err = r.store.DB.ExecContext(ctx, query,
+	result, err := r.store.DB.ExecContext(ctx, query,
 		u.ID.Hex(),
 		u.Username,
 		u.Password,
 		string(rolesJSON),
 		u.IsActive,
+		u.LastLoginAt,
 		u.UpdatedAt,
 		u.RefreshToken,
 		u.RefreshTokenExpiresAt,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return core.ErrUserNotFound
+	}
+	return nil
 }
 
 func (r *userRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
@@ -256,16 +279,18 @@ func (r *userRepository) InvalidateRefreshToken(ctx context.Context, userID prim
 	return err
 }
 
+// داخل الدالة FindByRefreshToken
 func (r *userRepository) FindByRefreshToken(ctx context.Context, refreshToken string) (*user.User, error) {
 	u := &user.User{}
 	var idStr string
 	var rolesStr string
 	var refreshExpiresAt sql.NullTime
+	var lastLoginAt sql.NullTime
 
-	query := `SELECT id, username, password, roles, is_active, created_at, updated_at, refresh_token_expires_at
-	          FROM users WHERE refresh_token = $1 AND refresh_token_expires_at > NOW()`
+	query := `SELECT id, username, password, roles, is_active, last_login_at, created_at, updated_at, refresh_token_expires_at
+	          FROM users WHERE refresh_token = $1 AND refresh_token_expires_at > NOW() AND is_active = true`
 	err := r.store.DB.QueryRowContext(ctx, query, refreshToken).Scan(
-		&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive,
+		&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive, &lastLoginAt,
 		&u.CreatedAt, &u.UpdatedAt, &refreshExpiresAt,
 	)
 	if err != nil {
@@ -276,7 +301,10 @@ func (r *userRepository) FindByRefreshToken(ctx context.Context, refreshToken st
 	}
 	u.ID, _ = primitive.ObjectIDFromHex(idStr)
 	if err := json.Unmarshal([]byte(rolesStr), &u.Roles); err != nil {
-		u.Roles = []string{"user"}
+		u.Roles = user.FromStrings([]string{"user"})
+	}
+	if lastLoginAt.Valid {
+		u.LastLoginAt = &lastLoginAt.Time
 	}
 	u.RefreshToken = refreshToken
 	if refreshExpiresAt.Valid {
@@ -284,7 +312,6 @@ func (r *userRepository) FindByRefreshToken(ctx context.Context, refreshToken st
 	}
 	return u, nil
 }
-
 func (r *userRepository) GetNextSequence(ctx context.Context, sequenceName string) (int, error) {
 	var seq int
 	query := `SELECT nextval($1)`
@@ -297,7 +324,7 @@ func (r *userRepository) GetNextSequence(ctx context.Context, sequenceName strin
 
 func (r *userRepository) FindAll(ctx context.Context, page, limit int) ([]*user.User, error) {
 	skip := (page - 1) * limit
-	query := `SELECT id, username, password, roles, is_active, created_at, updated_at, refresh_token, refresh_token_expires_at
+	query := `SELECT id, username, password, roles, is_active, last_login_at, created_at, updated_at, refresh_token, refresh_token_expires_at
 	          FROM users LIMIT $1 OFFSET $2`
 	rows, err := r.store.DB.QueryContext(ctx, query, limit, skip)
 	if err != nil {
@@ -310,9 +337,10 @@ func (r *userRepository) FindAll(ctx context.Context, page, limit int) ([]*user.
 		var idStr string
 		var refreshToken sql.NullString
 		var refreshExpiresAt sql.NullTime
+		var lastLoginAt sql.NullTime
 		var rolesStr string
 		err := rows.Scan(
-			&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive,
+			&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive, &lastLoginAt,
 			&u.CreatedAt, &u.UpdatedAt, &refreshToken, &refreshExpiresAt,
 		)
 		if err != nil {
@@ -320,7 +348,10 @@ func (r *userRepository) FindAll(ctx context.Context, page, limit int) ([]*user.
 		}
 		u.ID, _ = primitive.ObjectIDFromHex(idStr)
 		if err := json.Unmarshal([]byte(rolesStr), &u.Roles); err != nil {
-			u.Roles = []string{"user"}
+			u.Roles = user.FromStrings([]string{"user"})
+		}
+		if lastLoginAt.Valid {
+			u.LastLoginAt = &lastLoginAt.Time
 		}
 		if refreshToken.Valid {
 			u.RefreshToken = refreshToken.String
@@ -339,7 +370,7 @@ func (r *userRepository) FindAllUsers(ctx context.Context, skip, limit int64) ([
 	if err != nil {
 		return nil, 0, err
 	}
-	query := `SELECT id, username, password, roles, is_active, created_at, updated_at, refresh_token, refresh_token_expires_at
+	query := `SELECT id, username, password, roles, is_active, last_login_at, created_at, updated_at, refresh_token, refresh_token_expires_at
 	          FROM users LIMIT $1 OFFSET $2`
 	rows, err := r.store.DB.QueryContext(ctx, query, limit, skip)
 	if err != nil {
@@ -352,9 +383,10 @@ func (r *userRepository) FindAllUsers(ctx context.Context, skip, limit int64) ([
 		var idStr string
 		var refreshToken sql.NullString
 		var refreshExpiresAt sql.NullTime
+		var lastLoginAt sql.NullTime
 		var rolesStr string
 		err := rows.Scan(
-			&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive,
+			&idStr, &u.Username, &u.Password, &rolesStr, &u.IsActive, &lastLoginAt,
 			&u.CreatedAt, &u.UpdatedAt, &refreshToken, &refreshExpiresAt,
 		)
 		if err != nil {
@@ -362,7 +394,10 @@ func (r *userRepository) FindAllUsers(ctx context.Context, skip, limit int64) ([
 		}
 		u.ID, _ = primitive.ObjectIDFromHex(idStr)
 		if err := json.Unmarshal([]byte(rolesStr), &u.Roles); err != nil {
-			u.Roles = []string{"user"}
+			u.Roles = user.FromStrings([]string{"user"})
+		}
+		if lastLoginAt.Valid {
+			u.LastLoginAt = &lastLoginAt.Time
 		}
 		if refreshToken.Valid {
 			u.RefreshToken = refreshToken.String
@@ -430,3 +465,91 @@ func (r *userRepository) UpdateUserRole(ctx context.Context, userID primitive.Ob
 	return tx.Commit()
 
 }
+
+///
+
+// داخل userRepository
+
+func (r *userRepository) CreateUserWithInvite(ctx context.Context, u *user.User, details *user.UserDetails, inviteCode string) error {
+	tx, err := r.store.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Find and lock invite code
+	var invID string
+	var isUsed bool
+	var expiresAt time.Time
+	query := `SELECT id, is_used, expires_at FROM invite_codes WHERE code = $1 FOR UPDATE`
+	err = tx.QueryRowContext(ctx, query, inviteCode).Scan(&invID, &isUsed, &expiresAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return core.ErrInvalidInviteCode
+		}
+		return fmt.Errorf("find invite: %w", err)
+	}
+	if isUsed || expiresAt.Before(time.Now()) {
+		return core.ErrInvalidInviteCode
+	}
+
+	// Create user
+	if err := r.createUserInTx(ctx, tx, u, details); err != nil {
+		return err
+	}
+
+	// Mark invite used
+	_, err = tx.ExecContext(ctx, `UPDATE invite_codes SET is_used = true, used_by = $1 WHERE id = $2`, u.ID.Hex(), invID)
+	if err != nil {
+		return fmt.Errorf("mark invite used: %w", err)
+	}
+
+	return tx.Commit()
+}
+
+func (r *userRepository) createUserInTx(ctx context.Context, tx *sql.Tx, u *user.User, details *user.UserDetails) error {
+	rolesJSON, err := json.Marshal(u.Roles)
+	if err != nil {
+		return fmt.Errorf("marshal roles: %w", err)
+	}
+	detailsRolesJSON, err := json.Marshal(details.Roles)
+	if err != nil {
+		return fmt.Errorf("marshal details roles: %w", err)
+	}
+
+	query := `INSERT INTO users (id, username, password, roles, is_active, last_login_at, created_at, updated_at, refresh_token, refresh_token_expires_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+	_, err = tx.ExecContext(ctx, query,
+		u.ID.Hex(),
+		u.Username,
+		u.Password,
+		string(rolesJSON),
+		u.IsActive,
+		u.LastLoginAt,
+		u.CreatedAt,
+		u.UpdatedAt,
+		u.RefreshToken,
+		u.RefreshTokenExpiresAt,
+	)
+	if err != nil {
+		return fmt.Errorf("insert user: %w", err)
+	}
+
+	detailsQuery := `INSERT INTO user_details (uuid, user_id, roles, is_active, status, created_at, updated_at)
+	                 VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err = tx.ExecContext(ctx, detailsQuery,
+		details.UUID,
+		u.ID.Hex(),
+		string(detailsRolesJSON),
+		details.IsActive,
+		details.Status,
+		details.CreatedAt,
+		details.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("insert user_details: %w", err)
+	}
+	return nil
+}
+
+// ----- END OF FILE: backend/MS-AI/internal/data/postgres/user_repo.go -----

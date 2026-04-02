@@ -1,0 +1,53 @@
+/* manga.css: شبكة المانجا وبطاقة المانجا وتفاصيل الفصل */
+.manga-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.75rem; margin-top: 2rem; }
+.manga-card { background: var(--bg-primary); border-radius: var(--radius-lg); overflow: hidden; transition: all var(--transition-base); border: 1px solid var(--border-light); cursor: pointer; position: relative; }
+.manga-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-xl); }
+.manga-cover { width: 100%; height: 380px; object-fit: cover; transition: transform var(--transition-slow); }
+.manga-card:hover .manga-cover { transform: scale(1.02); }
+.manga-info { padding: 1.25rem; }
+.manga-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; }
+.manga-description { font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.5; }
+.manga-meta { margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-muted); }
+
+/* Manga Reactions Preview */
+.manga-reactions-preview {
+    margin-top: 0.75rem;
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-light);
+}
+
+.manga-reaction-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.manga-reaction-emoji {
+    font-size: 0.9rem;
+}
+
+.details-layout { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem; }
+.details-cover { width: 280px; height: 380px; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-lg); }
+.details-content { flex: 1; }
+.chapter-list { list-style: none; margin: 0; padding: 0; }
+.chapter-list li { margin-bottom: 0.75rem; }
+.chapter-list li a { text-decoration: none; color: var(--text-primary); }
+
+/* ========== بطاقة المانجا المحسنة ========== */
+.manga-card-link { text-decoration: none; color: inherit; display: block; width: 100%; height: 100%; position: relative; z-index: 2; }
+
+.manga-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+.stat-pill { background: var(--bg-tertiary); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); font-size: 0.7rem; font-weight: 600; }
+
+.toolbar { margin-bottom: 1.5rem; }
+.toolbar input { max-width: 400px; }

@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/user/user_repository.go -----
 // internal/data/user/user_repository.go
 package user
 
@@ -7,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	coreAdmin "github.com/835-droid/ms-ai-backend/internal/core/admin"
 	core "github.com/835-droid/ms-ai-backend/internal/core/common"
 	coreUser "github.com/835-droid/ms-ai-backend/internal/core/user"
 	mongoData "github.com/835-droid/ms-ai-backend/internal/data/mongo"
@@ -56,45 +56,28 @@ func (r *MongoUserRepository) Create(ctx context.Context, u *coreUser.User, deta
 	u.UpdatedAt = now
 	u.IsActive = true
 	if u.Roles == nil {
-		u.Roles = []string{"user"}
+		u.Roles = coreUser.FromStrings([]string{"user"})
 	}
 
 	// Copy relevant fields to details
-	details.Roles = u.Roles
-	details.IsActive = u.IsActive
-	details.CreatedAt = now
-	details.UpdatedAt = now
+	details.UserBase = u.UserBase
 	details.UUID = u.UUID
 	details.UserID = u.UserID
 
-	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		// Check if username already exists
-		count, err := r.usersColl.CountDocuments(sessCtx, bson.M{"username": u.Username})
-		if err != nil {
-			return fmt.Errorf("check username: %w", err)
-		}
-		if count > 0 {
-			return core.ErrUserExists
-		}
+	var err error
 
-		// Insert user
-		res, err := r.usersColl.InsertOne(sessCtx, u)
-		if err != nil {
-			if mongo.IsDuplicateKeyError(err) {
-				return core.ErrUserExists
-			}
-			return fmt.Errorf("insert user: %w", err)
-		}
-		u.ID = res.InsertedID.(primitive.ObjectID)
+	// Check if MongoDB supports transactions (replica set)
+	isReplicaSet := r.store.IsReplicaSet(ctx)
 
-		// Insert user details
-		detailsColl := r.usersColl.Database().Collection("user_details")
-		if _, err := detailsColl.InsertOne(sessCtx, details); err != nil {
-			return fmt.Errorf("insert user details: %w", err)
-		}
-
-		return nil
-	}, nil)
+	if isReplicaSet {
+		// Use transaction for replica sets
+		err = r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
+			return r.createUserInSession(sessCtx, u, details)
+		}, nil)
+	} else {
+		// For standalone MongoDB, perform operations without transaction
+		err = r.createUserWithoutTransaction(ctx, u, details)
+	}
 
 	if err != nil {
 		r.store.Log.Error("create user failed", map[string]interface{}{
@@ -105,9 +88,70 @@ func (r *MongoUserRepository) Create(ctx context.Context, u *coreUser.User, deta
 	}
 
 	r.store.Log.Info("user created", map[string]interface{}{
-		"username": u.Username,
-		"id":       u.ID.Hex(),
+		"username":    u.Username,
+		"id":          u.ID.Hex(),
+		"replica_set": isReplicaSet,
 	})
+	return nil
+}
+
+// createUserInSession creates user within a transaction session
+func (r *MongoUserRepository) createUserInSession(sessCtx mongo.SessionContext, u *coreUser.User, details *coreUser.UserDetails) error {
+	// Check if username already exists
+	count, err := r.usersColl.CountDocuments(sessCtx, bson.M{"username": u.Username})
+	if err != nil {
+		return fmt.Errorf("check username: %w", err)
+	}
+	if count > 0 {
+		return core.ErrUserExists
+	}
+
+	// Insert user
+	res, err := r.usersColl.InsertOne(sessCtx, u)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return core.ErrUserExists
+		}
+		return fmt.Errorf("insert user: %w", err)
+	}
+	u.ID = res.InsertedID.(primitive.ObjectID)
+
+	// Insert user details
+	detailsColl := r.usersColl.Database().Collection("user_details")
+	if _, err := detailsColl.InsertOne(sessCtx, details); err != nil {
+		return fmt.Errorf("insert user details: %w", err)
+	}
+
+	return nil
+}
+
+// createUserWithoutTransaction creates user without transaction (for standalone MongoDB)
+func (r *MongoUserRepository) createUserWithoutTransaction(ctx context.Context, u *coreUser.User, details *coreUser.UserDetails) error {
+	// Check if username already exists
+	count, err := r.usersColl.CountDocuments(ctx, bson.M{"username": u.Username})
+	if err != nil {
+		return fmt.Errorf("check username: %w", err)
+	}
+	if count > 0 {
+		return core.ErrUserExists
+	}
+
+	// Insert user
+	res, err := r.usersColl.InsertOne(ctx, u)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return core.ErrUserExists
+		}
+		return fmt.Errorf("insert user: %w", err)
+	}
+	u.ID = res.InsertedID.(primitive.ObjectID)
+
+	// Insert user details
+	detailsColl := r.usersColl.Database().Collection("user_details")
+	if _, err := detailsColl.InsertOne(ctx, details); err != nil {
+		return fmt.Errorf("insert user details: %w", err)
+	}
+
 	return nil
 }
 
@@ -171,23 +215,24 @@ func (r *MongoUserRepository) UpdateUser(ctx context.Context, user *coreUser.Use
 
 	user.UpdatedAt = time.Now()
 
-	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		result, err := r.usersColl.ReplaceOne(sessCtx, bson.M{"_id": user.ID, "is_active": true}, user)
-		if err != nil {
-			return fmt.Errorf("update user: %w", err)
-		}
-		if result.MatchedCount == 0 {
-			return core.ErrUserNotFound
-		}
-		return nil
-	}, nil)
-
+	result, err := r.usersColl.UpdateOne(ctx, bson.M{"username": user.Username}, bson.M{"$set": bson.M{
+		"last_login_at":            user.LastLoginAt,
+		"updated_at":               user.UpdatedAt,
+		"password":                 user.Password,
+		"refresh_token":            user.RefreshToken,
+		"refresh_token_expires_at": user.RefreshTokenExpiresAt,
+		"roles":                    user.Roles,
+		"is_active":                user.IsActive,
+	}})
 	if err != nil {
 		r.store.Log.Error("update user failed", map[string]interface{}{
-			"id":    user.ID.Hex(),
-			"error": err.Error(),
+			"username": user.Username,
+			"error":    err.Error(),
 		})
-		return err
+		return fmt.Errorf("update user: %w", err)
+	}
+	if result.MatchedCount == 0 {
+		return core.ErrUserNotFound
 	}
 	return nil
 }
@@ -395,6 +440,7 @@ func (r *MongoUserRepository) UseCode(ctx context.Context, codeID primitive.Obje
 	return nil
 }
 
+// CreateInviteCode creates a new invite code.
 func (r *MongoUserRepository) CreateInviteCode(ctx context.Context, invite *coreUser.InviteCode) error {
 	if err := r.ensureInitialized(); err != nil {
 		return err
@@ -409,8 +455,25 @@ func (r *MongoUserRepository) CreateInviteCode(ctx context.Context, invite *core
 	}
 	invite.IsUsed = false
 
-	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		res, err := r.invitesColl.InsertOne(sessCtx, invite)
+	// تحقق مما إذا كان MongoDB يدعم المعاملات (replica set)
+	isReplicaSet := r.store.IsReplicaSet(ctx)
+
+	var err error
+	if isReplicaSet {
+		err = r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
+			res, err := r.invitesColl.InsertOne(sessCtx, invite)
+			if err != nil {
+				if mongo.IsDuplicateKeyError(err) {
+					return core.ErrInviteCodeExists
+				}
+				return fmt.Errorf("insert invite code: %w", err)
+			}
+			invite.ID = res.InsertedID.(primitive.ObjectID)
+			return nil
+		}, nil)
+	} else {
+		// في حالة standalone، نقوم بالإدراج بدون معاملة
+		res, err := r.invitesColl.InsertOne(ctx, invite)
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
 				return core.ErrInviteCodeExists
@@ -418,8 +481,7 @@ func (r *MongoUserRepository) CreateInviteCode(ctx context.Context, invite *core
 			return fmt.Errorf("insert invite code: %w", err)
 		}
 		invite.ID = res.InsertedID.(primitive.ObjectID)
-		return nil
-	}, nil)
+	}
 
 	if err != nil {
 		r.store.Log.Error("create invite code failed", map[string]interface{}{
@@ -540,6 +602,11 @@ func (r *MongoUserRepository) DeleteInviteCode(ctx context.Context, codeID primi
 	return nil
 }
 
+// DeleteInvite implements coreuser.Repository.DeleteInvite
+func (r *MongoUserRepository) DeleteInvite(ctx context.Context, codeID primitive.ObjectID) error {
+	return r.DeleteInviteCode(ctx, codeID)
+}
+
 func (r *MongoUserRepository) FindAllInvites(ctx context.Context, page, limit int) ([]*coreUser.InviteCode, error) {
 	if page < 1 {
 		page = 1
@@ -547,65 +614,6 @@ func (r *MongoUserRepository) FindAllInvites(ctx context.Context, page, limit in
 	skip := int64((page - 1) * limit)
 	invites, _, err := r.ListInviteCodes(ctx, skip, int64(limit))
 	return invites, err
-}
-
-// ---- Admin repository adapter ----
-
-// adminRepoAdapter implements admin.Repository
-type adminRepoAdapter struct {
-	r *MongoUserRepository
-}
-
-// AsAdminRepository returns an adapter that implements admin.Repository
-func (r *MongoUserRepository) AsAdminRepository() coreAdmin.Repository {
-	return &adminRepoAdapter{r: r}
-}
-
-// CreateInvite implements admin.Repository.CreateInvite
-func (a *adminRepoAdapter) CreateInvite(ctx context.Context, invite *coreAdmin.InviteCode) error {
-	u := &coreUser.InviteCode{
-		ID:        invite.ID,
-		Code:      invite.Code,
-		CreatedAt: invite.CreatedAt,
-		ExpiresAt: invite.ExpiresAt,
-		IsUsed:    invite.IsUsed,
-		UsedBy:    invite.UsedBy,
-	}
-	return a.r.CreateInviteCode(ctx, u)
-}
-
-// ListInvites implements admin.Repository.ListInvites
-func (a *adminRepoAdapter) ListInvites(ctx context.Context, skip, limit int64) ([]*coreAdmin.InviteCode, int64, error) {
-	invites, total, err := a.r.ListInviteCodes(ctx, skip, limit)
-	if err != nil {
-		return nil, 0, err
-	}
-	out := make([]*coreAdmin.InviteCode, len(invites))
-	for i, v := range invites {
-		out[i] = &coreAdmin.InviteCode{
-			ID:        v.ID,
-			Code:      v.Code,
-			CreatedAt: v.CreatedAt,
-			ExpiresAt: v.ExpiresAt,
-			IsUsed:    v.IsUsed,
-			UsedBy:    v.UsedBy,
-		}
-	}
-	return out, total, nil
-}
-
-// DeleteInvite implements admin.Repository.DeleteInvite
-func (a *adminRepoAdapter) DeleteInvite(ctx context.Context, id string) error {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return errors.New("invalid invite code id")
-	}
-	return a.r.DeleteInviteCode(ctx, oid)
-}
-
-// DeleteInvite implements Repository.DeleteInvite (primitive.ObjectID version)
-func (r *MongoUserRepository) DeleteInvite(ctx context.Context, id primitive.ObjectID) error {
-	return r.DeleteInviteCode(ctx, id)
 }
 
 // GetNextSequence returns the next sequence value for a given sequence name.
@@ -684,3 +692,86 @@ func (r *MongoUserRepository) UpdateUserRole(ctx context.Context, userID primiti
 	}
 	return nil
 }
+
+//////
+
+// داخل MongoUserRepository
+
+func (r *MongoUserRepository) CreateUserWithInvite(ctx context.Context, user *coreUser.User, details *coreUser.UserDetails, inviteCode string) error {
+	if err := r.ensureInitialized(); err != nil {
+		return err
+	}
+
+	ctx, cancel := r.store.WithCollectionTimeout(ctx, "users", "write")
+	defer cancel()
+
+	if r.store.IsReplicaSet(ctx) {
+		return r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
+			// Find invite within session
+			inv, err := r.findCodeInSession(sessCtx, inviteCode)
+			if err != nil {
+				return err
+			}
+			if inv.IsUsed || inv.ExpiresAt.Before(time.Now()) {
+				return core.ErrInvalidInviteCode
+			}
+			// Create user
+			if err := r.createUserInSession(sessCtx, user, details); err != nil {
+				return err
+			}
+			// Mark invite used
+			return r.markInviteUsedInSession(sessCtx, inv.ID, user.ID)
+		}, nil)
+	} else {
+		// No transaction: do sequentially but not atomic
+		inv, err := r.FindCode(ctx, inviteCode)
+		if err != nil {
+			return err
+		}
+		if inv.IsUsed || inv.ExpiresAt.Before(time.Now()) {
+			return core.ErrInvalidInviteCode
+		}
+		if err := r.Create(ctx, user, details); err != nil {
+			return err
+		}
+		if err := r.UseCode(ctx, inv.ID, user.ID); err != nil {
+			// log but still return error to fail signup
+			r.store.Log.Error("failed to mark invite used after user creation", map[string]interface{}{"error": err.Error()})
+			return err
+		}
+		return nil
+	}
+}
+
+// helper functions for session
+func (r *MongoUserRepository) findCodeInSession(sessCtx mongo.SessionContext, code string) (*coreUser.InviteCode, error) {
+	var inv coreUser.InviteCode
+	err := r.invitesColl.FindOne(sessCtx, bson.M{"code": code}).Decode(&inv)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, core.ErrInvalidInviteCode
+		}
+		return nil, fmt.Errorf("find invite: %w", err)
+	}
+	return &inv, nil
+}
+
+func (r *MongoUserRepository) markInviteUsedInSession(sessCtx mongo.SessionContext, inviteID, userID primitive.ObjectID) error {
+	update := bson.M{
+		"$set": bson.M{
+			"is_used": true,
+			"used_by": userID,
+			"used_at": time.Now(),
+		},
+	}
+	result, err := r.invitesColl.UpdateByID(sessCtx, inviteID, update)
+	if err != nil {
+		return fmt.Errorf("mark invite used: %w", err)
+	}
+	if result.MatchedCount == 0 {
+		return core.ErrInviteCodeNotFound
+	}
+	return nil
+}
+
+// ----- END OF FILE: backend/MS-AI/internal/data/user/user_repository.go -----

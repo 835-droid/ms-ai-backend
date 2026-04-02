@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/core/user/invite_code.go -----
 // internal/core/invite_code.go
 package user
 
@@ -19,3 +20,5 @@ type InviteCode struct {
 
 // CollectionName هو اسم Collection في MongoDB لهذا النموذج.
 const InviteCodeCollectionName = "invite_codes"
+
+// ----- END OF FILE: backend/MS-AI/internal/core/user/invite_code.go -----

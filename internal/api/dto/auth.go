@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/dto/auth.go -----
 // internal/api/dto/auth.go
 package dto
 
@@ -30,3 +31,5 @@ type UserDTO struct {
 	Username string   `json:"username"`
 	Roles    []string `json:"roles"`
 }
+
+//

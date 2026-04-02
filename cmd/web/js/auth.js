@@ -6,18 +6,38 @@ function getRefreshToken() {
     return localStorage.getItem(CONFIG.TOKEN_KEYS.REFRESH);
 }
 
+function getStoredUser() {
+    const raw = localStorage.getItem(CONFIG.TOKEN_KEYS.USER);
+    if (!raw) return null;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        localStorage.removeItem(CONFIG.TOKEN_KEYS.USER);
+        return null;
+    }
+}
+
 function saveTokens(accessToken, refreshToken) {
     localStorage.setItem(CONFIG.TOKEN_KEYS.ACCESS, accessToken);
     localStorage.setItem(CONFIG.TOKEN_KEYS.REFRESH, refreshToken);
 }
 
+function saveSession(accessToken, refreshToken, user = null) {
+    saveTokens(accessToken, refreshToken);
+    if (user) {
+        localStorage.setItem(CONFIG.TOKEN_KEYS.USER, JSON.stringify(user));
+    }
+}
+
 function clearTokens() {
     localStorage.removeItem(CONFIG.TOKEN_KEYS.ACCESS);
     localStorage.removeItem(CONFIG.TOKEN_KEYS.REFRESH);
+    localStorage.removeItem(CONFIG.TOKEN_KEYS.USER);
 }
 
 function hasAuthToken() {
-    return Boolean(getAccessToken());
+    const token = getAccessToken();
+    return Boolean(token);
 }
 
 function getTokenPayload(token) {
@@ -35,12 +55,26 @@ function getTokenPayload(token) {
 }
 
 function getUserFromToken() {
+    const storedUser = getStoredUser();
+    if (storedUser) {
+        return storedUser;
+    }
+
     const token = getAccessToken();
     if (!token) return null;
-    return getTokenPayload(token);
+
+    const payload = getTokenPayload(token);
+    if (!payload) return null;
+
+    return {
+        id: payload.user_id || null,
+        roles: Array.isArray(payload.roles) ? payload.roles : []
+    };
 }
 
-function logoutLocal() {
+function logoutLocal(redirect = true) {
     clearTokens();
-    window.location.href = '/web/index.html';
+    if (redirect) {
+        window.location.href = webPagePath('index.html');
+    }
 }

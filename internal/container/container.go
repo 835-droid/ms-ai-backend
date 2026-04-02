@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/container/container.go -----
 package container
 
 import (
@@ -19,7 +20,7 @@ func NewContainer(cfg *config.Config, log *logger.Logger) (*Container, error) {
 
 	repos := initializeRepositories(cfg, log, mStore, pStore)
 	svcs := initializeServices(cfg, log, repos, mStore, pStore)
-	initializeInitialData(ctx, repos, log)
+	initializeInitialData(ctx, cfg, repos, log)
 
 	return &Container{
 		Config:   cfg,
@@ -44,3 +45,5 @@ func (c *Container) Close(ctx context.Context) error {
 	}
 	return nil
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/container/container.go -----

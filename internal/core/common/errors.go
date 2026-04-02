@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/core/common/errors.go -----
 package core
 
 import "errors"
@@ -25,6 +26,7 @@ var (
 	ErrMangaNotFound        = errors.New("manga not found")
 	ErrMangaChapterExists   = errors.New("manga chapter already exists")
 	ErrMangaChapterNotFound = errors.New("manga chapter not found")
+	ErrAlreadyRated         = errors.New("user has already rated this manga")
 )
 
 // AppError is a rich application error with HTTP mapping.
@@ -63,3 +65,5 @@ func IsExistsError(err error) bool {
 	}
 	return errors.Is(err, ErrUserExists) || errors.Is(err, ErrMangaExists) || errors.Is(err, ErrMangaChapterExists)
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/core/common/errors.go -----

@@ -13,27 +13,35 @@ This project follows **Hexagonal Architecture (Ports & Adapters)** with clear se
 ```
 ├── cmd/                    # Application entrypoints
 │   ├── server/            # HTTP server
-│   ├── cli/               # CLI tools
-│   └── migrations/        # Database migrations
+│   └── web/               # Static web files (HTML/CSS/JS)
 ├── internal/              # Private application code
 │   ├── api/               # HTTP layer (controllers, DTOs, routing)
-│   │   ├── v1/           # API versioning
 │   │   ├── dto/          # Data Transfer Objects
 │   │   ├── handler/      # HTTP handlers
 │   │   ├── middleware/   # HTTP middleware
 │   │   └── router/       # Route definitions
 │   ├── core/             # Business logic (use cases, domain models)
+│   │   ├── admin/        # Admin business logic
+│   │   ├── auth/         # Authentication business logic
+│   │   ├── common/       # Shared business logic
+│   │   ├── content/      # Content-specific business logic
+│   │   └── user/         # User management business logic
 │   ├── data/             # Data access layer (repositories)
-│   └── infra/            # Infrastructure concerns
+│   │   ├── admin/        # Admin repositories (MongoDB + PostgreSQL)
+│   │   ├── common/       # Shared data models
+│   │   ├── content/      # Content data repositories
+│   │   ├── mongo/        # MongoDB connection and utilities
+│   │   ├── postgres/     # PostgreSQL connection and utilities
+│   │   └── user/         # User data repositories
+│   └── container/        # Dependency injection
 ├── pkg/                  # Public packages
 │   ├── config/           # Configuration management
 │   ├── errors/           # Domain errors
 │   ├── jwt/              # JWT utilities
 │   ├── logger/           # Structured logging
 │   └── response/         # HTTP response helpers
+├── scripts/              # Utility scripts
 ├── test/                 # Testing utilities
-│   ├── integration/      # Integration tests
-│   └── fixtures/         # Test data
 └── docs/                 # Documentation
 ```
 
@@ -42,9 +50,19 @@ This project follows **Hexagonal Architecture (Ports & Adapters)** with clear se
 ### 🔐 Authentication & Authorization
 - JWT-based authentication with refresh tokens
 - Invite-code registration system
-- Role-based access control (User, Admin)
+- Role-based access control (User, Admin, Moderator)
 - Secure password hashing with bcrypt
 - Rate limiting and brute-force protection
+
+### 👥 Roles System
+
+The application implements role-based access control with three roles:
+
+- **user**: Default role for new users. Basic content access.
+- **admin**: System administrator. Full access including user management.
+- **moderator**: Content moderator. Can manage manga and chapters.
+
+Users start with `user` role and can be promoted by admins.
 
 ### 📚 Manga Management
 - Complete manga metadata management
@@ -126,6 +144,9 @@ docker-compose up -d
 # Or start manually
 make build
 ./bin/server
+
+# For development/testing without database
+DEV_NO_DB=1 ./bin/server
 ```
 
 ### 4. Verify Installation
@@ -134,7 +155,10 @@ make build
 # Health check
 curl http://localhost:8080/health
 
-# API documentation
+# Access web interface (works even without database)
+open http://localhost:8080/web/index.html
+
+# API documentation (requires database)
 open http://localhost:8080/docs
 ```
 
@@ -373,11 +397,13 @@ docker run -p 8080:8080 --env-file .env ms-ai
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | `8080` |
-| `CORS_ORIGINS` | Allowed CORS origins | `http://localhost:8080` |
+| `DB_TYPE` | Database type (mongo/postgres/hybrid) | `mongo` |
 | `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/msai` |
+| `POSTGRES_DSN` | PostgreSQL connection string | |
 | `JWT_SECRET` | JWT signing secret | Required |
 | `JWT_ACCESS_EXPIRY` | Access token expiry | `15m` |
 | `JWT_REFRESH_EXPIRY` | Refresh token expiry | `168h` |
+| `CORS_ORIGINS` | Allowed CORS origins | `http://localhost:8080` |
 
 ## Troubleshooting
 

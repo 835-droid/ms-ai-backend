@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/middleware/recovery.go -----
 package middleware
 
 import (
@@ -20,3 +21,5 @@ func RecoveryMiddleware(log *plog.Logger) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/middleware/recovery.go -----

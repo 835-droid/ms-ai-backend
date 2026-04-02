@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/mongo/mongodb.go -----
 package mongo
 
 import (
@@ -22,17 +23,15 @@ import (
 const (
 	defaultTimeout         = 16 * time.Second
 	DefaultLimit           = 50
-	connectTimeout         = 22 * time.Second
-	serverSelectionTimeout = 8 * time.Second
+	connectTimeout         = 15 * time.Second
+	serverSelectionTimeout = 12 * time.Second
 )
 
 var (
-	// conservative defaults
 	maxRetryWrites int32 = 3
 	maxRetryReads  int32 = 3
 )
 
-// MongoStats holds MongoDB operation statistics
 type MongoStats struct {
 	ActiveConnections    int32
 	AvailableConnections int32
@@ -44,17 +43,17 @@ type MongoStats struct {
 	TransactionLatency   time.Duration
 }
 
-// MongoStore holds the MongoDB client and helpers.
 type MongoStore struct {
-	Client  *mongo.Client
-	Log     *logger.Logger
-	DBName  string
-	stats   *MongoStats
-	slowOps sync.Map // tracks slow operation timings
-	monitor *MongoMonitor
+	Client       *mongo.Client
+	Log          *logger.Logger
+	DBName       string
+	stats        *MongoStats
+	slowOps      sync.Map
+	monitor      *MongoMonitor
+	replicaSet   bool
+	replicaSetMu sync.RWMutex
 }
 
-// NewMongoStore creates and returns a connected MongoStore.
 func NewMongoStore(cfg *config.Config, log *logger.Logger) (*MongoStore, error) {
 	if cfg == nil {
 		return nil, errors.New("config is required")
@@ -85,7 +84,6 @@ func NewMongoStore(cfg *config.Config, log *logger.Logger) (*MongoStore, error) 
 		SetMaxConnecting(2).
 		SetHeartbeatInterval(10 * time.Second)
 
-	// Apply pool sizes from config if provided
 	if cfg.MongoMaxPoolSize == 0 {
 		cfg.MongoMaxPoolSize = 100
 	}
@@ -95,7 +93,6 @@ func NewMongoStore(cfg *config.Config, log *logger.Logger) (*MongoStore, error) 
 	clientOptions = clientOptions.SetMaxPoolSize(cfg.MongoMaxPoolSize)
 	clientOptions = clientOptions.SetMinPoolSize(cfg.MongoMinPoolSize)
 
-	// Apply credentials when provided
 	if strings.TrimSpace(cfg.MongoUsername) != "" {
 		cred := options.Credential{
 			Username:   cfg.MongoUsername,
@@ -110,9 +107,33 @@ func NewMongoStore(cfg *config.Config, log *logger.Logger) (*MongoStore, error) 
 		return nil, fmt.Errorf("mongo connect: %w", err)
 	}
 
-	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+	var pingErr error
+	maxRetries := 2
+	for i := 0; i < maxRetries; i++ {
+		pingCtx, pingCancel := context.WithTimeout(context.Background(), 8*time.Second)
+		pingErr = client.Ping(pingCtx, readpref.Primary())
+		pingCancel()
+
+		if pingErr == nil {
+			break
+		}
+
+		if strings.Contains(pingErr.Error(), "server selection timeout") && i < maxRetries-1 {
+			log.Warn("MongoDB ping failed, retrying (Atlas cluster might be paused)",
+				map[string]interface{}{
+					"attempt":     i + 1,
+					"max_retries": maxRetries,
+					"error":       pingErr.Error(),
+				})
+			time.Sleep(time.Duration(i+1) * 2 * time.Second)
+			continue
+		}
+		break
+	}
+
+	if pingErr != nil {
 		_ = client.Disconnect(ctx)
-		return nil, fmt.Errorf("mongo ping: %w", err)
+		return nil, fmt.Errorf("mongo ping failed after %d retries: %w", maxRetries, pingErr)
 	}
 
 	store := &MongoStore{
@@ -122,17 +143,13 @@ func NewMongoStore(cfg *config.Config, log *logger.Logger) (*MongoStore, error) 
 		stats:  &MongoStats{},
 	}
 
-	// Initialize connection monitoring if enabled
 	if cfg.MongoEnableMonitoring {
 		if err := store.startMonitoring(); err != nil {
 			log.Warn("failed to start monitoring, continuing without it",
-				map[string]interface{}{
-					"error": err.Error(),
-				})
+				map[string]interface{}{"error": err.Error()})
 		}
 	}
 
-	// Ensure indexes with retry and backoff
 	backoff := 1 * time.Second
 	maxBackoff := 5 * time.Second
 	for i := 0; i < 3; i++ {
@@ -164,10 +181,11 @@ func NewMongoStore(cfg *config.Config, log *logger.Logger) (*MongoStore, error) 
 			"max_pool":   cfg.MongoMaxPoolSize,
 		})
 
+	store.replicaSet = store.checkReplicaSet(ctx)
+
 	return store, nil
 }
 
-// Close disconnects the MongoDB client and stops monitor (safe to call multiple times).
 func (s *MongoStore) Close(ctx context.Context) error {
 	if s == nil {
 		return nil
@@ -187,7 +205,6 @@ func (s *MongoStore) Close(ctx context.Context) error {
 	return nil
 }
 
-// GetCollection returns a collection handle from the configured database.
 func (s *MongoStore) GetCollection(name string) *mongo.Collection {
 	if s == nil || s.Client == nil || name == "" {
 		return nil
@@ -195,7 +212,16 @@ func (s *MongoStore) GetCollection(name string) *mongo.Collection {
 	return s.Client.Database(s.DBName).Collection(name)
 }
 
-// ValidOperationType validates operation types
+// IsReplicaSet now uses the cached value
+func (s *MongoStore) IsReplicaSet(ctx context.Context) bool {
+	if s == nil || s.Client == nil {
+		return false
+	}
+	s.replicaSetMu.RLock()
+	defer s.replicaSetMu.RUnlock()
+	return s.replicaSet
+}
+
 func ValidOperationType(opType string) bool {
 	switch strings.ToLower(opType) {
 	case "read", "write", "query":
@@ -205,35 +231,29 @@ func ValidOperationType(opType string) bool {
 	}
 }
 
-// WithCollectionTimeout applies the appropriate timeout for a given collection and operation type (read/write/query).
-// If collection or operation type is invalid, defaults are used.
 func (s *MongoStore) WithCollectionTimeout(ctx context.Context, collName, opType string) (context.Context, context.CancelFunc) {
 	if s == nil {
-		// fallback to a background context when store is not available
 		return context.WithTimeout(context.Background(), defaultTimeout)
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
-
-	// If incoming context is already canceled or expired, create a fresh one to avoid immediate cancellation
 	if ctx.Err() != nil {
-		if s != nil && s.Log != nil {
+		if s.Log != nil {
 			s.Log.Warn("incoming context already canceled/expired, creating fresh context", map[string]interface{}{"collection": collName, "op": opType})
 		}
 		ctx = context.Background()
 	}
 
-	// Validate inputs
 	if collName == "" {
-		if s != nil && s.Log != nil {
+		if s.Log != nil {
 			s.Log.Warn("empty collection name, using default timeout", nil)
 		}
 		return context.WithTimeout(ctx, defaultTimeout)
 	}
 
 	if !ValidOperationType(opType) {
-		if s != nil && s.Log != nil {
+		if s.Log != nil {
 			s.Log.Warn("invalid operation type, using default timeout",
 				map[string]interface{}{
 					"collection": collName,
@@ -243,7 +263,6 @@ func (s *MongoStore) WithCollectionTimeout(ctx context.Context, collName, opType
 		return context.WithTimeout(ctx, defaultTimeout)
 	}
 
-	// Get collection config with fallback to default
 	cfg, ok := collectionsConfig[collName]
 	if !ok {
 		s.Log.Debug("no config for collection, using default",
@@ -251,7 +270,6 @@ func (s *MongoStore) WithCollectionTimeout(ctx context.Context, collName, opType
 		cfg = DefaultCollectionConfig()
 	}
 
-	// Get operation-specific timeout
 	var timeout time.Duration
 	switch strings.ToLower(opType) {
 	case "read":
@@ -262,9 +280,8 @@ func (s *MongoStore) WithCollectionTimeout(ctx context.Context, collName, opType
 		timeout = cfg.QueryTimeout
 	}
 
-	// Ensure minimum timeout
 	if timeout < 100*time.Millisecond {
-		if s != nil && s.Log != nil {
+		if s.Log != nil {
 			s.Log.Warn("timeout too short, using minimum",
 				map[string]interface{}{
 					"collection": collName,
@@ -278,39 +295,27 @@ func (s *MongoStore) WithCollectionTimeout(ctx context.Context, collName, opType
 	return context.WithTimeout(ctx, timeout)
 }
 
-// EnsureIndexes creates necessary indexes for all database collections.
-// Uses CreateMany per-collection to reduce roundtrips.
 func (s *MongoStore) EnsureIndexes(ctx context.Context) error {
 	if s == nil {
 		return errors.New("mongo store is nil")
 	}
-	if s.Log == nil {
-		// If no logger is present, we still attempt to create indexes but we won't log details.
-		// This keeps behavior safe for tests and environments without a logger.
-	} else {
+	if s.Log != nil {
 		s.Log.Info("ensuring mongo indexes", nil)
 	}
 
-	// Get all index configurations
 	configs := GetAllIndexConfigs()
-
-	// Create indexes for each collection
 	for _, cfg := range configs {
-		// Get collection
 		coll := s.GetCollection(cfg.Collection)
 		if coll == nil {
 			if s.Log != nil {
 				s.Log.Warn("collection not available, skipping index creation", map[string]interface{}{"collection": cfg.Collection})
 			}
-			// continue with other collections instead of failing fast
 			continue
 		}
 
-		// Create indexes (log expected count beforehand)
 		expected := len(cfg.Indexes)
 		s.Log.Debug("creating indexes for collection", map[string]interface{}{"collection": cfg.Collection, "expected_count": expected})
 		if err := createManyIndexes(ctx, coll, cfg.Indexes, cfg.Collection); err != nil {
-			// Log the error but continue with other collections
 			s.Log.Error(fmt.Sprintf("failed to create indexes for %s", cfg.Collection),
 				map[string]interface{}{"error": err.Error(), "collection": cfg.Collection})
 			continue
@@ -325,7 +330,6 @@ func (s *MongoStore) EnsureIndexes(ctx context.Context) error {
 	return nil
 }
 
-// CollectionConfig holds timeouts for specific collections.
 type CollectionConfig struct {
 	Name         string
 	ReadTimeout  time.Duration
@@ -335,13 +339,11 @@ type CollectionConfig struct {
 	IndexVersion int32
 }
 
-// DefaultCollectionConfig returns default collection timeouts
 func DefaultCollectionConfig() CollectionConfig {
 	return CollectionConfig{ReadTimeout: defaultTimeout, WriteTimeout: defaultTimeout, QueryTimeout: defaultTimeout}
 }
 
 var (
-	// Collection-specific configurations
 	collectionsConfig = map[string]CollectionConfig{
 		"users":          {ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, QueryTimeout: 15 * time.Second},
 		"manga":          {ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, QueryTimeout: 15 * time.Second},
@@ -350,12 +352,19 @@ var (
 	}
 )
 
-// WithTransaction executes the given function within a transaction using ExecuteTransaction defined in transaction.go
 func (s *MongoStore) WithTransaction(ctx context.Context, fn func(sessCtx mongo.SessionContext) error, cfg *TransactionConfig) error {
+	if !s.IsReplicaSet(ctx) {
+		session, err := s.Client.StartSession()
+		if err != nil {
+			return fmt.Errorf("start session: %w", err)
+		}
+		defer session.EndSession(ctx)
+		sessionCtx := mongo.NewSessionContext(ctx, session)
+		return fn(sessionCtx)
+	}
 	return ExecuteTransaction(ctx, s, fn, cfg.ToOptions())
 }
 
-// ToOptions converts TransactionConfig to TransactionOptions
 func (c *TransactionConfig) ToOptions() *TransactionOptions {
 	if c == nil {
 		return DefaultTransactionOptions()
@@ -371,7 +380,6 @@ func (c *TransactionConfig) ToOptions() *TransactionOptions {
 	}
 }
 
-// TransactionConfig holds configuration for a transaction
 type TransactionConfig struct {
 	MaxRetries     int
 	InitialDelay   time.Duration
@@ -382,7 +390,6 @@ type TransactionConfig struct {
 	WriteConcern   *writeconcern.WriteConcern
 }
 
-// DefaultTransactionConfig returns default transaction settings
 func DefaultTransactionConfig() *TransactionConfig {
 	return &TransactionConfig{
 		MaxRetries:     3,
@@ -395,7 +402,6 @@ func DefaultTransactionConfig() *TransactionConfig {
 	}
 }
 
-// GetStats returns current MongoDB connection statistics
 func (s *MongoStore) GetStats() MongoStats {
 	if s == nil || s.monitor == nil {
 		return MongoStats{}
@@ -413,15 +419,12 @@ func (s *MongoStore) GetStats() MongoStats {
 	}
 }
 
-// GetDetailedHealth returns a detailed health snapshot including monitor metrics and basic pool info.
 func (s *MongoStore) GetDetailedHealth(ctx context.Context) (map[string]interface{}, error) {
 	metrics := map[string]interface{}{}
 	if s != nil && s.monitor != nil {
 		m := s.monitor.GetMetrics()
 		metrics["metrics"] = m
 	}
-
-	// Attempt to get serverStatus for additional fields (best-effort)
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	var ss bson.M
@@ -432,18 +435,15 @@ func (s *MongoStore) GetDetailedHealth(ctx context.Context) (map[string]interfac
 			metrics["serverStatus_error"] = err.Error()
 		}
 	}
-
 	return metrics, nil
 }
 
-// Healthy checks if the MongoDB connection is healthy
 func (s *MongoStore) Healthy(ctx context.Context) error {
 	if s == nil || s.Client == nil {
 		return errors.New("mongo store or client is nil")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-
 	if err := s.Client.Ping(ctx, readpref.Primary()); err != nil {
 		if s.Log != nil {
 			s.Log.Error("mongodb health check failed", map[string]interface{}{"error": err.Error()})
@@ -453,7 +453,6 @@ func (s *MongoStore) Healthy(ctx context.Context) error {
 	return nil
 }
 
-// trackSlowOperation records the start time of an operation (safe no-op if monitor nil)
 func (s *MongoStore) trackSlowOperation(start time.Time) {
 	if s == nil || s.monitor == nil {
 		return
@@ -461,7 +460,6 @@ func (s *MongoStore) trackSlowOperation(start time.Time) {
 	s.monitor.RecordOperation(start, nil)
 }
 
-// logOperationFailure records a failed operation (safe no-op if monitor nil)
 func (s *MongoStore) logOperationFailure(err error) {
 	if s == nil || s.monitor == nil {
 		return
@@ -469,7 +467,6 @@ func (s *MongoStore) logOperationFailure(err error) {
 	s.monitor.RecordOperation(time.Now(), err)
 }
 
-// recordOperationLatency updates operation latency stats (safe no-op if monitor nil)
 func (s *MongoStore) recordOperationLatency(latency time.Duration) {
 	if s == nil || s.monitor == nil {
 		return
@@ -477,8 +474,6 @@ func (s *MongoStore) recordOperationLatency(latency time.Duration) {
 	s.monitor.RecordOperation(time.Now().Add(-latency), nil)
 }
 
-// startMonitoring initializes and starts the connection monitor.
-// Returns an error if monitoring cannot be started.
 func (s *MongoStore) startMonitoring() error {
 	if s == nil {
 		return errors.New("store is nil")
@@ -489,27 +484,35 @@ func (s *MongoStore) startMonitoring() error {
 	if s.Log == nil {
 		return errors.New("logger is nil")
 	}
-
-	// Create monitor with validation
 	monitor := NewMongoMonitor(s.Client, s.Log)
 	if monitor == nil {
 		return errors.New("failed to create monitor")
 	}
-
-	// Start monitoring with panic recovery
 	defer func() {
 		if r := recover(); r != nil {
 			s.Log.Error("panic in monitor start",
 				map[string]interface{}{"error": fmt.Sprintf("%v", r)})
 		}
 	}()
-
-	// Start monitor
 	monitor.Start()
-
-	// Only set monitor if start succeeded
 	s.monitor = monitor
 	s.Log.Info("mongodb monitoring started", nil)
-
 	return nil
 }
+
+func (s *MongoStore) checkReplicaSet(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	var result bson.M
+	err := s.Client.Database("admin").RunCommand(ctx, bson.M{"isMaster": 1}).Decode(&result)
+	if err != nil {
+		s.Log.Warn("failed to check replica set status", map[string]interface{}{"error": err.Error()})
+		return false
+	}
+	if setName, ok := result["setName"]; ok && setName != nil {
+		return true
+	}
+	return false
+}
+
+// ----- END OF FILE: backend/MS-AI/internal/data/mongo/mongodb.go -----

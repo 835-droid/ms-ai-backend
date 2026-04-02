@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/pkg/logger/logger.go -----
 package logger
 
 import (
@@ -100,3 +101,5 @@ func (lg *Logger) WithFields(fields map[string]interface{}) *zerolog.Event {
 func (lg *Logger) GetZerologLogger() *zerolog.Logger {
 	return &lg.l
 }
+
+// ----- END OF FILE: backend/MS-AI/pkg/logger/logger.go -----

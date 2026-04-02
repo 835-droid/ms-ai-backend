@@ -10,33 +10,46 @@ async function parseApiResponse(response) {
 
 async function refreshSession() {
     const refreshToken = getRefreshToken();
-    if (!refreshToken) return false;
-
-    const response = await fetch(`${CONFIG.API_BASE}${CONFIG.ROUTES.AUTH}/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken })
-    });
-
-    const data = await parseApiResponse(response);
-
-    if (!response.ok) {
-        clearTokens();
+    if (!refreshToken) {
+        console.log('No refresh token');
         return false;
     }
 
-    const payload = data?.data || data || {};
-    if (payload.access_token && payload.refresh_token) {
-        saveTokens(payload.access_token, payload.refresh_token);
-        return true;
-    }
+    console.log('Attempting to refresh session');
+    try {
+        const response = await fetch(`${CONFIG.API_BASE}${CONFIG.ROUTES.AUTH}/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken })
+        });
 
-    clearTokens();
-    return false;
+        const data = await parseApiResponse(response);
+
+        if (!response.ok) {
+            console.log('Refresh failed with status', response.status);
+            // إذا كان الخادم يرفض التوكن، نمسحه
+            clearTokens();
+            return false;
+        }
+
+        const payload = data?.data || data || {};
+        if (payload.access_token && payload.refresh_token) {
+            console.log('Refresh successful');
+            saveSession(payload.access_token, payload.refresh_token, getStoredUser());
+            return true;
+        }
+
+        clearTokens();
+        return false;
+    } catch (err) {
+        console.error('Refresh network error', err);
+        clearTokens();
+        return false;
+    }
 }
 
 async function apiFetch(path, options = {}, meta = {}) {
-    const { skipAuth = false, retryOnAuth = true } = meta;
+    const { skipAuth = false, retryOnAuth = true, noRedirect = false } = meta;
 
     const headers = new Headers(options.headers || {});
     const isFormData = options.body instanceof FormData;
@@ -52,25 +65,42 @@ async function apiFetch(path, options = {}, meta = {}) {
         }
     }
 
-    const response = await fetch(`${CONFIG.API_BASE}${path}`, {
+    console.log(`apiFetch: ${path}`, { method: options.method, skipAuth, noRedirect });
+
+    let response = await fetch(`${CONFIG.API_BASE}${path}`, {
         ...options,
         headers
     });
 
-    const data = await parseApiResponse(response);
-
+    // معالجة 401 مع إعادة محاولة التحديث مرة واحدة
     if (response.status === 401 && retryOnAuth && !skipAuth) {
+        console.log('Got 401, attempting refresh');
         const refreshed = await refreshSession();
         if (refreshed) {
-            return apiFetch(path, options, { skipAuth, retryOnAuth: false });
+            // إعادة المحاولة مع التوكن الجديد
+            const newToken = getAccessToken();
+            headers.set('Authorization', `Bearer ${newToken}`);
+            response = await fetch(`${CONFIG.API_BASE}${path}`, {
+                ...options,
+                headers
+            });
+        } else {
+            // فشل التحديث – لا نعيد التوجيه تلقائياً، بل نرمي خطأ واضح
+            if (!noRedirect) {
+                // نسمح للكود المتصل باتخاذ القرار، ولكننا نظهر رسالة خطأ
+                console.error('Session expired and refresh failed');
+                throw new Error('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.');
+            } else {
+                throw new Error('Authentication required');
+            }
         }
-        clearTokens();
-        window.location.href = CONFIG.DEFAULT_REDIRECT;
-        throw new Error('Authentication expired');
     }
+
+    const data = await parseApiResponse(response);
 
     if (!response.ok) {
         const message = data?.error || data?.message || 'Request failed';
+        console.error('apiFetch error', response.status, message);
         throw new Error(message);
     }
 

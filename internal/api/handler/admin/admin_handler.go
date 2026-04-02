@@ -1,4 +1,4 @@
-// Package admin provides admin-related handlers
+// ----- START OF FILE: backend/MS-AI/internal/api/handler/admin/admin_handler.go -----
 package admin
 
 import (
@@ -7,12 +7,12 @@ import (
 	"strconv"
 
 	"github.com/835-droid/ms-ai-backend/internal/core/admin"
+	"github.com/835-droid/ms-ai-backend/pkg/i18n"
 	"github.com/835-droid/ms-ai-backend/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// Handler handles admin endpoints
 type Handler struct {
 	service admin.Service
 }
@@ -26,7 +26,7 @@ func (h *Handler) CreateInvite(c *gin.Context) {
 		Length int `json:"length"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, "invalid request")
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationInvalidFormat))
 		return
 	}
 	if req.Length <= 0 {
@@ -34,7 +34,7 @@ func (h *Handler) CreateInvite(c *gin.Context) {
 	}
 	invite, err := h.service.CreateInviteCode(c.Request.Context(), req.Length)
 	if err != nil {
-		response.InternalError(c, "failed to create invite code")
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
 		return
 	}
 	response.SuccessResp(c, http.StatusCreated, gin.H{
@@ -58,7 +58,7 @@ func (h *Handler) ListInvites(c *gin.Context) {
 	skip := int64((page - 1) * limit)
 	invs, total, err := h.service.ListInviteCodes(c.Request.Context(), skip, int64(limit))
 	if err != nil {
-		response.InternalError(c, fmt.Sprintf("failed to list invite codes: %v", err))
+		response.InternalError(c, fmt.Sprintf("%s: %v", i18n.TContext(c, i18n.MsgSystemInternalError), err))
 		return
 	}
 	response.SuccessResp(c, http.StatusOK, gin.H{"invites": invs, "total": total})
@@ -67,36 +67,33 @@ func (h *Handler) ListInvites(c *gin.Context) {
 func (h *Handler) DeleteInvite(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		response.ValidationError(c, "missing id")
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationInvalidFormat))
 		return
 	}
 	if err := h.service.DeleteInviteCode(c.Request.Context(), id); err != nil {
-		response.InternalError(c, fmt.Sprintf("failed to delete invite code: %v", err))
+		response.InternalError(c, fmt.Sprintf("%s: %v", i18n.TContext(c, i18n.MsgSystemInternalError), err))
 		return
 	}
-	response.SuccessResp(c, http.StatusOK, gin.H{"message": "invite code deleted successfully"})
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": i18n.TContext(c, i18n.MsgInviteCodeGenerated)})
 }
 
 func (h *Handler) GetMetrics(c *gin.Context) {
-	// This should be implemented to return system metrics
 	metrics := h.service.GetMetrics(c.Request.Context())
 	response.SuccessResp(c, http.StatusOK, metrics)
 }
 
 func (h *Handler) GetDBMetrics(c *gin.Context) {
-	// This should be implemented to return database metrics
 	metrics := h.service.GetDBMetrics(c.Request.Context())
 	response.SuccessResp(c, http.StatusOK, metrics)
 }
 
-// ListUsers returns paginated list of all users
 func (h *Handler) ListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 
 	users, total, err := h.service.ListUsers(c.Request.Context(), page, limit)
 	if err != nil {
-		response.InternalError(c, "failed to list users")
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
 		return
 	}
 
@@ -108,18 +105,49 @@ func (h *Handler) ListUsers(c *gin.Context) {
 	})
 }
 
-// PromoteUser makes a user admin
 func (h *Handler) PromoteUser(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		response.ValidationError(c, "user id required")
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationRequired))
 		return
 	}
 
 	if err := h.service.PromoteToAdmin(c.Request.Context(), userID); err != nil {
-		response.InternalError(c, "failed to promote user")
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
 		return
 	}
 
-	response.SuccessResp(c, http.StatusOK, gin.H{"message": "user promoted to admin"})
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": i18n.TContext(c, i18n.MsgUserProfileUpdated)})
 }
+
+func (h *Handler) DeactivateUser(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationRequired))
+		return
+	}
+
+	if err := h.service.DeactivateUser(c.Request.Context(), userID); err != nil {
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+		return
+	}
+
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": i18n.TContext(c, i18n.MsgUserProfileUpdated)})
+}
+
+func (h *Handler) DeleteUser(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationRequired))
+		return
+	}
+
+	if err := h.service.DeleteUser(c.Request.Context(), userID); err != nil {
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+		return
+	}
+
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": i18n.TContext(c, i18n.MsgUserProfileUpdated)})
+}
+
+// ----- END OF FILE: backend/MS-AI/internal/api/handler/admin/admin_handler.go -----

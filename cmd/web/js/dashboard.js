@@ -1,5 +1,17 @@
 let allMangas = [];
 
+function formatCompactNumber(value) {
+    const number = Number(value || 0);
+    if (number >= 1000000) return `${(number / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
+    if (number >= 1000) return `${(number / 1000).toFixed(1).replace(/\.0$/, '')}K`;
+    return String(number);
+}
+
+function formatRating(value) {
+    const number = Number(value || 0);
+    return number > 0 ? number.toFixed(1) : '0.0';
+}
+
 function renderMangas(mangas) {
     const container = document.getElementById('manga-grid');
     const emptyState = document.getElementById('empty-state');
@@ -28,6 +40,31 @@ function renderMangas(mangas) {
                         <div class="manga-meta">
                             <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
                         </div>
+                        <div class="manga-stats">
+                            <span class="stat-pill">👁 ${escapeHtml(formatCompactNumber(manga.views_count))}</span>
+                            <span class="stat-pill">♥ ${escapeHtml(formatCompactNumber(manga.likes_count))}</span>
+                            <span class="stat-pill">★ ${escapeHtml(formatRating(manga.average_rating))} (${escapeHtml(formatCompactNumber(manga.rating_count))})</span>
+                        </div>
+                        
+                        ${manga.reactions_count ? `
+                            <div class="manga-reactions-preview">
+                                ${Object.entries(manga.reactions_count)
+                                    .filter(([_, count]) => count > 0)
+                                    .sort((a, b) => b[1] - a[1])
+                                    .slice(0, 3)
+                                    .map(([type, count]) => {
+                                        const emojis = {
+                                            upvote: '👍',
+                                            funny: '😂',
+                                            love: '❤️',
+                                            surprised: '😮',
+                                            angry: '😡',
+                                            sad: '😢'
+                                        };
+                                        return `<div class="manga-reaction-badge"><span class="manga-reaction-emoji">${emojis[type] || '👍'}</span> ${formatCompactNumber(count)}</div>`;
+                                    }).join('')}
+                            </div>
+                        ` : ''}
                     </div>
                 </a>
             </article>
@@ -50,6 +87,7 @@ function applySearchFilter() {
 }
 
 async function loadDashboard() {
+    console.log('loadDashboard: checking auth');
     if (!requireAuth()) return;
 
     const container = document.getElementById('manga-grid');
@@ -70,7 +108,7 @@ async function handleDashboardLogout() {
     } catch {
         // ignore
     }
-    logoutLocal();
+    logoutLocal(true);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

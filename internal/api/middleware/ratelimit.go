@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/middleware/ratelimit.go -----
 package middleware
 
 import (
@@ -75,3 +76,5 @@ func RateLimitMiddlewareFromConfig(cfg *config.Config, portion float64) gin.Hand
 	}
 	return RateLimitMiddleware(rate.Limit(rps), burst)
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/middleware/ratelimit.go -----

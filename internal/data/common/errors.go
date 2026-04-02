@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/common/errors.go -----
 package data
 
 import (
@@ -95,3 +96,5 @@ func IsNetworkError(err error) bool {
 	}
 	return false
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/data/common/errors.go -----

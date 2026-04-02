@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/pkg/config/config.go -----
 package config
 
 import (
@@ -40,14 +41,15 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	if os.Getenv("ENVIRONMENT") != "production" {
-		err := godotenv.Load()
-		if err != nil {
-			fmt.Printf("Warning: failed to load .env file: %v\n", err)
-		} else {
-			fmt.Println(".env loaded successfully")
-		}
+	fmt.Fprintf(os.Stderr, "DB_TYPE before load: %s\n", os.Getenv("DB_TYPE"))
+	// Always try to load .env for development
+	err := godotenv.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load .env file: %v\n", err)
+	} else {
+		fmt.Fprintf(os.Stderr, ".env loaded successfully\n")
 	}
+	fmt.Fprintf(os.Stderr, "DB_TYPE after load: %s\n", os.Getenv("DB_TYPE"))
 
 	cfg := &Config{
 		MongoURI:                 getenv("MONGO_URI", ""),
@@ -182,3 +184,5 @@ func getenv(key, def string) string {
 	}
 	return def
 }
+
+// ----- END OF FILE: backend/MS-AI/pkg/config/config.go -----

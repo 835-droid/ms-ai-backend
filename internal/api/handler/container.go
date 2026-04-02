@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/handler/container.go -----
 package handler
 
 import (
@@ -47,3 +48,5 @@ func NewContainer(
 		MangaChapterHandler: chapterHandler,
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/handler/container.go -----

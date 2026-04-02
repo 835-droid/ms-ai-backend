@@ -62,6 +62,13 @@ function splitLines(text) {
         .filter(Boolean);
 }
 
+function normalizeImageUrl(value) {
+    return String(value || '')
+        .trim()
+        .replace(/^["']+|["']+$/g, '')
+        .trim();
+}
+
 function toTagArray(text) {
     return String(text || '')
         .split(',')
@@ -69,19 +76,170 @@ function toTagArray(text) {
         .filter(Boolean);
 }
 
-function requireAuth(redirectUrl = '/web/index.html') {
+function requireAuth(redirectUrl = webPagePath('index.html')) {
     if (!hasAuthToken()) {
         window.location.href = redirectUrl;
         return false;
     }
+    const token = getAccessToken();
+    if (token) {
+        try {
+            const payload = getTokenPayload(token);
+            if (payload && payload.exp) {
+                const expiry = payload.exp * 1000;
+                if (Date.now() >= expiry) {
+                    clearTokens();
+                    window.location.href = redirectUrl;
+                    return false;
+                }
+            }
+        } catch {
+            // تجاهل أخطاء فك التشفير هنا؛ API سيتعامل مع فشل المصادقة.
+        }
+    }
     return true;
 }
 
-async function ensureAdmin() {
+function getUserRolesFromToken() {
+    const user = getUserFromToken();
+    return user?.roles || [];
+}
+
+function isAdminFromToken() {
+    const roles = getUserRolesFromToken();
+    return roles.includes('admin');
+}
+
+async function refreshAndCheckAdmin() {
     try {
-        await apiFetch('/admin/check');
-        return true;
-    } catch {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+            return isAdminFromToken();
+        }
+        return false;
+    } catch (e) {
+        console.error('Refresh failed in ensureAdmin', e);
         return false;
     }
 }
+
+// ensureAdmin محسنة
+async function ensureAdmin() {
+    if (isAdminFromToken()) {
+        console.log('ensureAdmin: admin from token');
+        return true;
+    }
+
+    console.log('ensureAdmin: token does not have admin role, attempting refresh');
+    const refreshed = await refreshAndCheckAdmin();
+    if (refreshed) {
+        console.log('ensureAdmin: after refresh, admin role found');
+        return true;
+    }
+
+    try {
+        console.log('ensureAdmin: calling /admin/check');
+        await apiFetch('/admin/check');
+        console.log('ensureAdmin: server check passed');
+        return true;
+    } catch (err) {
+        console.error('ensureAdmin: server check failed', err);
+        return false;
+    }
+}
+
+// زر العودة للأعلى العالمي
+function initGlobalScrollToTop() {
+    const btn = document.createElement('button');
+    btn.id = 'global-scroll-top';
+    btn.innerHTML = '↑';
+    btn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s;
+        z-index: 1000;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    `;
+    document.body.appendChild(btn);
+    
+    window.addEventListener('scroll', () => {
+        btn.style.opacity = window.scrollY > 300 ? '1' : '0';
+    });
+    
+    btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initGlobalScrollToTop);
+
+// ========== Dark Mode Toggle ==========
+function initDarkModeToggle() {
+    if (window._darkModeToggleInitialized) return;
+    window._darkModeToggleInitialized = true;
+    
+    // Apply saved/default dark mode to body FIRST, regardless of toggle button existence
+    const savedMode = localStorage.getItem('darkMode');
+    const isDarkMode = savedMode === null ? true : savedMode === 'true';
+    
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+    }
+    
+    // Only register click listener if toggle button exists
+    const toggle = document.querySelector('.dark-mode-toggle');
+    if (!toggle) return;
+    
+    toggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        const now = document.body.classList.contains('dark-mode');
+        localStorage.setItem('darkMode', now ? 'true' : 'false');
+    });
+}
+
+// ========== Navbar Setup ==========
+function initNavbar() {
+    if (window._navbarInitialized) return;
+    window._navbarInitialized = true;
+    
+    // Get user info from token
+    const user = getUserFromToken();
+    const initials = user?.username ? user.username.substring(0, 2).toUpperCase() : 'US';
+    
+    // Setup navbar user badge
+    const userBadge = document.querySelector('.navbar-user-badge');
+    if (userBadge) {
+        const displayName = user?.username || 'مستخدم';
+        const avatar = userBadge.querySelector('.navbar-user-avatar');
+        if (avatar) {
+            avatar.textContent = initials;
+        }
+    }
+    
+    // Mobile menu toggle (if implemented)
+    const toggle = document.querySelector('.navbar-toggle');
+    const menu = document.querySelector('.navbar-menu');
+    if (toggle && menu) {
+        toggle.addEventListener('click', () => {
+            menu.classList.toggle('active');
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initDarkModeToggle();
+    initNavbar();
+});

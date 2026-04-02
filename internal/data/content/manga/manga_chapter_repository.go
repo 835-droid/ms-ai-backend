@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/content/manga/manga_chapter_repository.go -----
 package manga
 
 import (
@@ -51,45 +52,87 @@ func (r *MongoMangaChapterRepository) CreateMangaChapter(ctx context.Context, ch
 		"number":   chapter.Number,
 	})
 
-	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		// Check if chapter number exists for this manga
-		count, err := r.coll.CountDocuments(sessCtx, bson.M{
-			"manga_id": chapter.MangaID,
-			"number":   chapter.Number,
-		})
-		if err != nil {
-			return fmt.Errorf("check chapter number: %w", err)
-		}
-		if count > 0 {
-			return corecommon.ErrInvalidInput
-		}
+	// Check if MongoDB supports transactions (replica set)
+	isReplicaSet := r.store.IsReplicaSet(ctx)
 
-		res, err := r.coll.InsertOne(sessCtx, chapter)
-		if err != nil {
-			if mongo.IsDuplicateKeyError(err) {
-				return corecommon.ErrInvalidInput
-			}
-			return fmt.Errorf("insert chapter: %w", err)
-		}
-		chapter.ID = res.InsertedID.(primitive.ObjectID)
-		return nil
-	}, nil)
+	var err error
+	if isReplicaSet {
+		// Use transaction for replica sets
+		err = r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
+			return r.createMangaChapterInSession(sessCtx, chapter)
+		}, nil)
+	} else {
+		// For standalone MongoDB, perform operations without transaction
+		err = r.createMangaChapterWithoutTransaction(ctx, chapter)
+	}
 
 	if err != nil {
 		r.store.Log.Error("create chapter failed", map[string]interface{}{
-			"manga_id": chapter.MangaID.Hex(),
-			"number":   chapter.Number,
-			"error":    err.Error(),
+			"manga_id":    chapter.MangaID.Hex(),
+			"number":      chapter.Number,
+			"replica_set": isReplicaSet,
+			"error":       err.Error(),
 		})
 		return err
 	}
 
 	r.store.Log.Info("manga chapter created", map[string]interface{}{
-		"id":       chapter.ID.Hex(),
-		"manga_id": chapter.MangaID.Hex(),
-		"title":    chapter.Title,
+		"id":          chapter.ID.Hex(),
+		"manga_id":    chapter.MangaID.Hex(),
+		"title":       chapter.Title,
+		"number":      chapter.Number,
+		"replica_set": isReplicaSet,
+	})
+	return nil
+}
+
+// createMangaChapterInSession creates manga chapter within a transaction session
+func (r *MongoMangaChapterRepository) createMangaChapterInSession(sessCtx mongo.SessionContext, chapter *coremanga.MangaChapter) error {
+	// Check if chapter number exists for this manga
+	count, err := r.coll.CountDocuments(sessCtx, bson.M{
+		"manga_id": chapter.MangaID,
 		"number":   chapter.Number,
 	})
+	if err != nil {
+		return fmt.Errorf("check chapter number: %w", err)
+	}
+	if count > 0 {
+		return corecommon.ErrInvalidInput
+	}
+
+	res, err := r.coll.InsertOne(sessCtx, chapter)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return corecommon.ErrInvalidInput
+		}
+		return fmt.Errorf("insert chapter: %w", err)
+	}
+	chapter.ID = res.InsertedID.(primitive.ObjectID)
+	return nil
+}
+
+// createMangaChapterWithoutTransaction creates manga chapter without transaction (for standalone MongoDB)
+func (r *MongoMangaChapterRepository) createMangaChapterWithoutTransaction(ctx context.Context, chapter *coremanga.MangaChapter) error {
+	// Check if chapter number exists for this manga
+	count, err := r.coll.CountDocuments(ctx, bson.M{
+		"manga_id": chapter.MangaID,
+		"number":   chapter.Number,
+	})
+	if err != nil {
+		return fmt.Errorf("check chapter number: %w", err)
+	}
+	if count > 0 {
+		return corecommon.ErrInvalidInput
+	}
+
+	res, err := r.coll.InsertOne(ctx, chapter)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return corecommon.ErrInvalidInput
+		}
+		return fmt.Errorf("insert chapter: %w", err)
+	}
+	chapter.ID = res.InsertedID.(primitive.ObjectID)
 	return nil
 }
 
@@ -154,38 +197,81 @@ func (r *MongoMangaChapterRepository) UpdateMangaChapter(ctx context.Context, ch
 
 	chapter.UpdatedAt = time.Now()
 
-	err := r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
-		count, err := r.coll.CountDocuments(sessCtx, bson.M{
-			"_id":      bson.M{"$ne": chapter.ID},
-			"manga_id": chapter.MangaID,
-			"number":   chapter.Number,
-		})
-		if err != nil {
-			return fmt.Errorf("check chapter number: %w", err)
-		}
-		if count > 0 {
-			return corecommon.ErrInvalidInput
-		}
+	// Check if MongoDB supports transactions (replica set)
+	isReplicaSet := r.store.IsReplicaSet(ctx)
 
-		result, err := r.coll.ReplaceOne(sessCtx, bson.M{"_id": chapter.ID}, chapter)
-		if err != nil {
-			if mongo.IsDuplicateKeyError(err) {
-				return corecommon.ErrInvalidInput
-			}
-			return fmt.Errorf("update chapter: %w", err)
-		}
-		if result.MatchedCount == 0 {
-			return corecommon.ErrNotFound
-		}
-		return nil
-	}, nil)
+	var err error
+	if isReplicaSet {
+		// Use transaction for replica sets
+		err = r.store.WithTransaction(ctx, func(sessCtx mongo.SessionContext) error {
+			return r.updateMangaChapterInSession(sessCtx, chapter)
+		}, nil)
+	} else {
+		// For standalone MongoDB, perform operations without transaction
+		err = r.updateMangaChapterWithoutTransaction(ctx, chapter)
+	}
 
 	if err != nil {
 		r.store.Log.Error("update chapter failed", map[string]interface{}{
-			"id":    chapter.ID.Hex(),
-			"error": err.Error(),
+			"id":          chapter.ID.Hex(),
+			"replica_set": isReplicaSet,
+			"error":       err.Error(),
 		})
 		return err
+	}
+	return nil
+}
+
+// updateMangaChapterInSession updates manga chapter within a transaction session
+func (r *MongoMangaChapterRepository) updateMangaChapterInSession(sessCtx mongo.SessionContext, chapter *coremanga.MangaChapter) error {
+	count, err := r.coll.CountDocuments(sessCtx, bson.M{
+		"_id":      bson.M{"$ne": chapter.ID},
+		"manga_id": chapter.MangaID,
+		"number":   chapter.Number,
+	})
+	if err != nil {
+		return fmt.Errorf("check chapter number: %w", err)
+	}
+	if count > 0 {
+		return corecommon.ErrInvalidInput
+	}
+
+	result, err := r.coll.ReplaceOne(sessCtx, bson.M{"_id": chapter.ID}, chapter)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return corecommon.ErrInvalidInput
+		}
+		return fmt.Errorf("update chapter: %w", err)
+	}
+	if result.MatchedCount == 0 {
+		return corecommon.ErrNotFound
+	}
+	return nil
+}
+
+// updateMangaChapterWithoutTransaction updates manga chapter without transaction (for standalone MongoDB)
+func (r *MongoMangaChapterRepository) updateMangaChapterWithoutTransaction(ctx context.Context, chapter *coremanga.MangaChapter) error {
+	count, err := r.coll.CountDocuments(ctx, bson.M{
+		"_id":      bson.M{"$ne": chapter.ID},
+		"manga_id": chapter.MangaID,
+		"number":   chapter.Number,
+	})
+	if err != nil {
+		return fmt.Errorf("check chapter number: %w", err)
+	}
+	if count > 0 {
+		return corecommon.ErrInvalidInput
+	}
+
+	result, err := r.coll.ReplaceOne(ctx, bson.M{"_id": chapter.ID}, chapter)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return corecommon.ErrInvalidInput
+		}
+		return fmt.Errorf("update chapter: %w", err)
+	}
+	if result.MatchedCount == 0 {
+		return corecommon.ErrNotFound
 	}
 	return nil
 }
@@ -207,3 +293,5 @@ func (r *MongoMangaChapterRepository) DeleteMangaChapter(ctx context.Context, id
 	}
 	return nil
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/data/content/manga/manga_chapter_repository.go -----

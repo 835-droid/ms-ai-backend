@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/pkg/errors/errors.go -----
 // pkg/errors/errors.go
 package errors
 
@@ -151,3 +152,5 @@ func getHTTPStatus(code ErrorCode) int {
 		return http.StatusInternalServerError
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/pkg/errors/errors.go -----

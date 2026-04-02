@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/middleware/cors.go -----
 package middleware
 
 import (
@@ -42,3 +43,5 @@ func CORSMiddleware(cfg *config.Config) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/middleware/cors.go -----

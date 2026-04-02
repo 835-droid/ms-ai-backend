@@ -1,4 +1,5 @@
 async function loadControlPage() {
+    console.log('loadControlPage: checking auth');
     if (!requireAuth()) return;
 
     const welcomeBox = document.getElementById('welcome-box');
@@ -11,9 +12,15 @@ async function loadControlPage() {
     }
 
     const adminLink = document.getElementById('admin-link');
-    const isAdmin = await ensureAdmin().catch(() => false);
-    if (adminLink) {
-        adminLink.style.display = isAdmin ? 'flex' : 'none';
+    try {
+        const isAdmin = await ensureAdmin();
+        console.log('isAdmin:', isAdmin);
+        if (adminLink) {
+            adminLink.style.display = isAdmin ? 'flex' : 'none';
+        }
+    } catch (e) {
+        console.warn('Error checking admin:', e);
+        if (adminLink) adminLink.style.display = 'none';
     }
 }
 
@@ -21,9 +28,9 @@ async function handleLogoutClick() {
     try {
         await apiFetch('/auth/logout', { method: 'POST' });
     } catch {
-        // حتى لو فشل النداء، سننهي الجلسة محلياً
+        // ignore
     }
-    logoutLocal();
+    logoutLocal(true);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

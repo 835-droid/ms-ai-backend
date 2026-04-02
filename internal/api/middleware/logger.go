@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/api/middleware/logger.go -----
 package middleware
 
 import (
@@ -31,3 +32,5 @@ func LoggerMiddleware(log *plog.Logger) gin.HandlerFunc {
 		log.Info("http_request", fields)
 	}
 }
+
+// ----- END OF FILE: backend/MS-AI/internal/api/middleware/logger.go -----

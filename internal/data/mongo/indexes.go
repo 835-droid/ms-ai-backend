@@ -1,3 +1,4 @@
+// ----- START OF FILE: backend/MS-AI/internal/data/mongo/indexes.go -----
 package mongo
 
 import (
@@ -183,6 +184,18 @@ func GetAllIndexConfigs() []IndexConfig {
 					Keys:    bson.D{{Key: "$**", Value: "text"}},
 					Options: options.Index().SetName("manga_text_idx"),
 				},
+				{
+					Keys:    bson.D{{Key: "views_count", Value: -1}},
+					Options: options.Index(),
+				},
+				{
+					Keys:    bson.D{{Key: "average_rating", Value: -1}},
+					Options: options.Index(),
+				},
+				{
+					Keys:    bson.D{{Key: "likes_count", Value: -1}},
+					Options: options.Index(),
+				},
 			},
 		},
 		{
@@ -198,7 +211,38 @@ func GetAllIndexConfigs() []IndexConfig {
 				},
 			},
 		},
+		{
+			Collection: "manga_reactions",
+			Indexes: []mongo.IndexModel{
+				{
+					Keys:    bson.D{{Key: "manga_id", Value: 1}, {Key: "user_id", Value: 1}},
+					Options: options.Index().SetUnique(true),
+				},
+				{
+					Keys:    bson.D{{Key: "manga_id", Value: 1}, {Key: "type", Value: 1}},
+					Options: options.Index(),
+				},
+				{
+					Keys:    bson.D{{Key: "user_id", Value: 1}},
+					Options: options.Index(),
+				},
+			},
+		},
+		{
+			Collection: "manga_ratings",
+			Indexes: []mongo.IndexModel{
+				{
+					Keys:    bson.D{{Key: "manga_id", Value: 1}, {Key: "user_id", Value: 1}},
+					Options: options.Index().SetUnique(true),
+				},
+				{
+					Keys:    bson.D{{Key: "manga_id", Value: 1}},
+					Options: options.Index(),
+				},
+			},
+		},
 	}
 }
 
 // ... (keep the rest of the file, createManyIndexes and createIndexesIndividually, unchanged)
+// ----- END OF FILE: backend/MS-AI/internal/data/mongo/indexes.go -----
