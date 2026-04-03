@@ -33,40 +33,40 @@
 
 /* Dark Theme Overrides */
 body.dark-mode {
-    /* خلفيات داكنة متدرجة - محسنة للراحة */
-    --bg-dark: #050812;
-    --bg-darker: #0a0d15;
-    --bg-card: rgba(15, 18, 32, 0.95);
-    --bg-card-solid: #0f1220;
-    --bg-elevated: rgba(26, 31, 46, 0.95);
-    --bg-tertiary: #1a1f2e;
-    --bg-primary: #0f1220;
-    --bg-secondary: #050812;
+    /* خلفيات داكنة عميقة - عصرية */
+    --bg-dark: #010409;
+    --bg-darker: #0d1117;
+    --bg-card: rgba(13, 17, 23, 0.95);
+    --bg-card-solid: #0d1117;
+    --bg-elevated: rgba(28, 33, 40, 0.95);
+    --bg-tertiary: #1c2128;
+    --bg-primary: #0d1117;
+    --bg-secondary: #010409;
     
-    /* نصوص - أقل قسوة على العين */
-    --text-primary: #e5e7eb;
-    --text-secondary: #d1d5db;
-    --text-muted: #9ca3af;
+    /* نصوص - واضحة وحديثة */
+    --text-primary: #e6edf3;
+    --text-secondary: #c9d1d9;
+    --text-muted: #8b949e;
     
-    /* حدود وشفافية */
-    --border-light: rgba(212, 216, 223, 0.12);
-    --border-medium: rgba(212, 216, 223, 0.18);
-    --glass-blur: blur(12px);
-    --glass-bg: rgba(15, 18, 32, 0.85);
+    /* حدود معاصرة */
+    --border-light: rgba(48, 54, 61, 0.4);
+    --border-medium: rgba(68, 76, 86, 0.6);
+    --glass-blur: blur(16px);
+    --glass-bg: rgba(13, 17, 23, 0.88);
     
-    /* ظلال محسنة */
-    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 20px var(--primary-glow);
-    --shadow-glow-secondary: 0 0 15px var(--secondary-glow);
+    /* ظلال قوية وحديثة */
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.6);
+    --shadow-md: 0 8px 24px rgba(124, 58, 237, 0.15);
+    --shadow-lg: 0 16px 40px rgba(124, 58, 237, 0.1);
+    --shadow-glow: 0 0 30px var(--primary-glow);
+    --shadow-glow-secondary: 0 0 20px var(--secondary-glow);
     
     background: radial-gradient(circle at 10% 20%, var(--bg-dark), var(--bg-darker));
     color: var(--text-primary);
 }
 
 body.dark-mode::before {
-    background: radial-gradient(ellipse at 50% 30%, rgba(139, 92, 246, 0.08), transparent 70%);
+    background: radial-gradient(ellipse at 50% 30%, rgba(124, 58, 237, 0.12), rgba(6, 182, 212, 0.05) 70%);
 }
 
 /* ----- شريط التنقل (Navbar) عصري ----- */
