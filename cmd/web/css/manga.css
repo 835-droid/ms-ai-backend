@@ -189,6 +189,12 @@
     font-size: 0.75rem;
 }
 
+.trending-rating {
+    color: #fbbf24;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 .library-cta {
     text-align: center;
     padding: 3rem 2rem;

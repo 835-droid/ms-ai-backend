@@ -70,15 +70,15 @@ body {
 }
 
 body.dark-mode {
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #000000;
-    --bg-tertiary: #1a1a1a;
-    --text-primary: #ffffff;
-    --text-secondary: #e2e8f0;
-    --text-muted: #94a3b8;
-    --border-light: #333333;
-    --border-medium: #555555;
-    background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #1a1a1a 100%);
+    --bg-primary: #0f1220;
+    --bg-secondary: #050812;
+    --bg-tertiary: #1a1f2e;
+    --text-primary: #e5e7eb;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    --border-light: #2d3748;
+    --border-medium: #4a5568;
+    background: linear-gradient(135deg, #050812 0%, #0f1220 50%, #1a1f2e 100%);
 }
 
 @media (prefers-color-scheme: dark) {

@@ -33,31 +33,31 @@
 
 /* Dark Theme Overrides */
 body.dark-mode {
-    /* خلفيات داكنة متدرجة */
-    --bg-dark: #000000;
-    --bg-darker: #000000;
-    --bg-card: rgba(10, 10, 10, 0.95);
-    --bg-card-solid: #0a0a0a;
-    --bg-elevated: rgba(26, 26, 26, 0.95);
-    --bg-tertiary: #1a1a1a;
-    --bg-primary: #0a0a0a;
-    --bg-secondary: #000000;
+    /* خلفيات داكنة متدرجة - محسنة للراحة */
+    --bg-dark: #050812;
+    --bg-darker: #0a0d15;
+    --bg-card: rgba(15, 18, 32, 0.95);
+    --bg-card-solid: #0f1220;
+    --bg-elevated: rgba(26, 31, 46, 0.95);
+    --bg-tertiary: #1a1f2e;
+    --bg-primary: #0f1220;
+    --bg-secondary: #050812;
     
-    /* نصوص */
-    --text-primary: #ffffff;
-    --text-secondary: #e2e8f0;
-    --text-muted: #7e8a98;
+    /* نصوص - أقل قسوة على العين */
+    --text-primary: #e5e7eb;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
     
     /* حدود وشفافية */
-    --border-light: rgba(255, 255, 255, 0.15);
-    --border-medium: rgba(255, 255, 255, 0.25);
+    --border-light: rgba(212, 216, 223, 0.12);
+    --border-medium: rgba(212, 216, 223, 0.18);
     --glass-blur: blur(12px);
-    --glass-bg: rgba(10, 10, 10, 0.8);
+    --glass-bg: rgba(15, 18, 32, 0.85);
     
     /* ظلال محسنة */
-    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
-    --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.7);
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.6);
     --shadow-glow: 0 0 20px var(--primary-glow);
     --shadow-glow-secondary: 0 0 15px var(--secondary-glow);
     
