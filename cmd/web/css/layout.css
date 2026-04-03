@@ -184,6 +184,13 @@ body.dark-mode .dark-mode-toggle::before {
 
 .page-shell { max-width: 1400px; margin: 2rem auto; padding: 0 1.5rem; }
 .page-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); padding: 2rem; border: 1px solid rgba(255,255,255,0.3); transition: var(--transition-base); }
+
+/* Dark Mode: Override gray page-card with deep indigo/navy */
+body.dark-mode .page-card {
+    background: linear-gradient(145deg, rgba(15, 22, 41, 0.95), rgba(10, 14, 26, 0.98)) !important;
+    border: 1px solid rgba(99, 102, 241, 0.15) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.05) !important;
+}
 .page-card:hover { box-shadow: var(--shadow-xl); transform: translateY(-2px); }
 .page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border-light); }
 .page-header h1 { font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }

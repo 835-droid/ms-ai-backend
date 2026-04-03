@@ -75,15 +75,16 @@ body {
 }
 
 body.dark-mode {
-    --bg-primary: #0d1117;
-    --bg-secondary: #010409;
-    --bg-tertiary: #1c2128;
-    --text-primary: #e6edf3;
-    --text-secondary: #c9d1d9;
-    --text-muted: #8b949e;
-    --border-light: #30363d;
-    --border-medium: #444c56;
-    background: linear-gradient(135deg, #010409 0%, #0d1117 50%, #1c2128 100%);
+    /* نظام ألوان كحلي حصري عصري */
+    --bg-primary: #0a0e1a !important;
+    --bg-secondary: #070b14 !important;
+    --bg-tertiary: #0f1629 !important;
+    --text-primary: #e8edf5 !important;
+    --text-secondary: #94a3b8 !important;
+    --text-muted: #64748b !important;
+    --border-light: rgba(99, 102, 241, 0.15) !important;
+    --border-medium: rgba(99, 102, 241, 0.25) !important;
+    background: linear-gradient(135deg, #070b14 0%, #0a0e1a 40%, #0f1629 100%) !important;
 }
 
 @media (prefers-color-scheme: dark) {

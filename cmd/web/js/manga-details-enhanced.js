@@ -422,6 +422,29 @@ function updateStatsUi() {
     }
     // Update manga rating display
     renderStars(currentManga.average_rating);
+    
+    // Update all rating displays across the page
+    updateAllRatingDisplays();
+}
+
+// Update all rating displays on the page (for real-time updates)
+function updateAllRatingDisplays() {
+    if (!currentManga) return;
+    const avgRating = currentManga.average_rating || 0;
+    const ratingCount = currentManga.rating_count || 0;
+    
+    // Update rating in header/details section
+    document.querySelectorAll('.manga-average-rating').forEach(el => {
+        el.textContent = formatRating(avgRating);
+    });
+    document.querySelectorAll('.manga-rating-count').forEach(el => {
+        el.textContent = `${ratingCount} تقييم`;
+    });
+    
+    // Update any stat displays
+    document.querySelectorAll('.stat-rating-value').forEach(el => {
+        el.textContent = formatRating(avgRating);
+    });
 }
 
 // ========== عرض تفاصيل المانجا مع أزرار الإعجاب والمفضلة ==========
@@ -694,6 +717,11 @@ async function loadMangaDetailsPage() {
         updateReactionCounts();
         document.getElementById('manga-title-header').textContent = currentManga.title;
         document.getElementById('manga-subtitle').textContent = `${currentChapters.length} فصل | ${currentManga.tags?.length || 0} تصنيف`;
+        // Record manga view for analytics and most-viewed rankings
+        const viewMangaId = getCurrentMangaId();
+        if (viewMangaId) {
+            recordMangaView(viewMangaId);
+        }
     } catch (error) {
         setError(document.getElementById('manga-details'), error.message);
     }

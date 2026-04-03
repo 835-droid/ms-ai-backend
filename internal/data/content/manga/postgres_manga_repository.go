@@ -304,10 +304,10 @@ func (r *PostgresMangaRepository) ListMostViewed(ctx context.Context, since time
 	// Special case for "all time" - use the persisted views_count instead of aggregating logs
 	// This ensures mangas with historical views but no post-deployment logs still appear
 	if since.IsZero() {
+		// Remove is_published filter to show all manga (including unpublished)
 		query := `
 			SELECT m.id, m.title, m.slug, m.description, m.author_id, m.tags, m.cover_image, m.is_published, m.published_at, m.created_at, m.updated_at, m.views_count, m.likes_count, m.rating_sum, m.rating_count, m.average_rating
 			FROM mangas m
-			WHERE m.is_published = true
 			ORDER BY m.views_count DESC
 			LIMIT $1 OFFSET $2
 		`
@@ -353,15 +353,14 @@ func (r *PostgresMangaRepository) ListMostViewed(ctx context.Context, since time
 	}
 
 	// For time-bounded periods, aggregate from manga_view_logs
-	// Filter for published manga inside the subquery before LIMIT/OFFSET to ensure full ranking
+	// Remove is_published filter to show all manga (including unpublished)
 	query := `
 		SELECT m.id, m.title, m.slug, m.description, m.author_id, m.tags, m.cover_image, m.is_published, m.published_at, m.created_at, m.updated_at, m.views_count, m.likes_count, m.rating_sum, m.rating_count, m.average_rating, v.view_count
 		FROM mangas m
 		INNER JOIN (
 			SELECT l.manga_id, COUNT(*) as view_count
 			FROM manga_view_logs l
-			INNER JOIN mangas pm ON l.manga_id = pm.id
-			WHERE l.viewed_at >= $1 AND pm.is_published = true
+			WHERE l.viewed_at >= $1
 			GROUP BY l.manga_id
 			ORDER BY view_count DESC
 			LIMIT $2 OFFSET $3
@@ -414,10 +413,10 @@ func (r *PostgresMangaRepository) ListRecentlyUpdated(ctx context.Context, skip,
 	if r == nil || r.store == nil || r.store.DB == nil {
 		return nil, fmt.Errorf("postgres manga repo not initialized")
 	}
+	// Remove is_published filter to show all manga (including unpublished)
 	query := `
 		SELECT id, title, slug, description, author_id, tags, cover_image, is_published, published_at, created_at, updated_at, views_count, likes_count, rating_sum, rating_count, average_rating, reactions_count
 		FROM mangas
-		WHERE is_published = true
 		ORDER BY updated_at DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -466,10 +465,10 @@ func (r *PostgresMangaRepository) ListMostFollowed(ctx context.Context, skip, li
 	if r == nil || r.store == nil || r.store.DB == nil {
 		return nil, fmt.Errorf("postgres manga repo not initialized")
 	}
+	// Remove is_published filter to show all manga (including unpublished)
 	query := `
 		SELECT id, title, slug, description, author_id, tags, cover_image, is_published, published_at, created_at, updated_at, views_count, likes_count, favorites_count, rating_sum, rating_count, average_rating, reactions_count
 		FROM mangas
-		WHERE is_published = true
 		ORDER BY favorites_count DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -518,10 +517,11 @@ func (r *PostgresMangaRepository) ListTopRated(ctx context.Context, skip, limit 
 	if r == nil || r.store == nil || r.store.DB == nil {
 		return nil, fmt.Errorf("postgres manga repo not initialized")
 	}
+	// Remove is_published filter to show all manga with ratings (including unpublished)
 	query := `
 		SELECT id, title, slug, description, author_id, tags, cover_image, is_published, published_at, created_at, updated_at, views_count, likes_count, favorites_count, rating_sum, rating_count, average_rating, reactions_count
 		FROM mangas
-		WHERE is_published = true AND rating_count > 0
+		WHERE rating_count > 0
 		ORDER BY average_rating DESC, rating_count DESC
 		LIMIT $1 OFFSET $2
 	`

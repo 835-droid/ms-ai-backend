@@ -1,0 +1,804 @@
+/* admin.css - Admin Panel Styles */
+
+/* ========== Admin Theme Variables ========== */
+:root {
+    --admin-bg: #070b14;
+    --admin-card: #0d1224;
+    --admin-card-hover: #151e32;
+    --admin-border: rgba(99, 102, 241, 0.15);
+    --admin-border-light: rgba(99, 102, 241, 0.1);
+    --admin-text: #e8edf5;
+    --admin-text-muted: #64748b;
+    --admin-primary: #7c3aed;
+    --admin-primary-dark: #6d28d9;
+    --admin-primary-glow: rgba(124, 58, 237, 0.2);
+    --admin-success: #10b981;
+    --admin-danger: #ef4444;
+    --admin-warning: #f59e0b;
+    --admin-input-bg: #0a0e1a;
+    --admin-input-border: rgba(99, 102, 241, 0.2);
+}
+
+/* ========== Base Admin Styles ========== */
+body {
+    background: var(--admin-bg);
+    padding-top: 70px;
+}
+
+body, body.dark-mode {
+    background: var(--admin-bg);
+}
+
+/* ========== Sidebar Navigation ========== */
+.admin-sidebar {
+    position: fixed;
+    right: 0;
+    top: 70px;
+    width: 260px;
+    height: calc(100vh - 70px);
+    background: var(--admin-card);
+    border-left: 1px solid var(--admin-border);
+    padding: 1.5rem 0;
+    overflow-y: auto;
+    z-index: 100;
+    transition: transform 0.3s ease;
+}
+
+.admin-sidebar-header {
+    padding: 0 1.5rem 1rem;
+    border-bottom: 1px solid var(--admin-border);
+    margin-bottom: 1rem;
+}
+
+.admin-sidebar-header h3 {
+    color: var(--admin-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.5rem;
+    color: var(--admin-text-muted);
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border-right: 3px solid transparent;
+}
+
+.admin-nav-item:hover {
+    background: rgba(99, 102, 241, 0.05);
+    color: var(--admin-text);
+}
+
+.admin-nav-item.active {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--admin-primary);
+    border-right-color: var(--admin-primary);
+}
+
+.admin-nav-item i {
+    width: 20px;
+    text-align: center;
+}
+
+/* ========== Main Content ========== */
+.admin-main {
+    margin-right: 260px;
+    padding: 2rem;
+    min-height: calc(100vh - 70px);
+}
+
+/* ========== Stats Cards ========== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card-admin {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s;
+}
+
+.stat-card-admin:hover {
+    background: var(--admin-card-hover);
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.1);
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.stat-icon.mangas { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+.stat-icon.chapters { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.stat-icon.views { background: rgba(6, 182, 212, 0.2); color: #06b6d4; }
+.stat-icon.likes { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+.stat-number-admin {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--admin-primary), #06b6d4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label-admin {
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+}
+
+/* ========== Content Sections ========== */
+.admin-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.admin-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== Page Header ========== */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+    color: var(--admin-text);
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-header h2 i {
+    color: var(--admin-primary);
+}
+
+/* ========== Admin Cards ========== */
+.admin-card {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* ========== Search & Filter Bar ========== */
+.filter-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-bar input,
+.filter-bar select {
+    background: var(--admin-input-bg);
+    border: 1px solid var(--admin-input-border);
+    color: var(--admin-text);
+    padding: 0.625rem 1rem;
+    border-radius: 10px;
+    min-width: 200px;
+}
+
+.filter-bar input:focus,
+.filter-bar select:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 2px var(--admin-primary-glow);
+    outline: none;
+}
+
+/* ========== Manga List Item ========== */
+.manga-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s;
+}
+
+.manga-item:hover {
+    background: var(--admin-card-hover);
+    border-color: var(--admin-primary);
+}
+
+.manga-item-cover {
+    width: 50px;
+    height: 70px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.manga-item-info {
+    flex: 1;
+}
+
+.manga-item-title {
+    color: var(--admin-text);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.manga-item-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--admin-text-muted);
+}
+
+.manga-item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ========== Form Styles ========== */
+.admin-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-section {
+    background: rgba(15, 22, 41, 0.5);
+    border: 1px solid var(--admin-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.form-section h3 {
+    color: var(--admin-text);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--admin-border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-section h3 i {
+    color: var(--admin-primary);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    background: var(--admin-input-bg);
+    border: 1px solid var(--admin-input-border);
+    color: var(--admin-text);
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    border-color: var(--admin-primary);
+    box-shadow: 0 0 0 2px var(--admin-primary-glow);
+    outline: none;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ========== Tags ========== */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.tag-item {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--admin-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tag-item button {
+    background: none;
+    border: none;
+    color: var(--admin-primary);
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* ========== File Upload ========== */
+.upload-area {
+    border: 2px dashed var(--admin-border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    border-color: var(--admin-primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.upload-area i {
+    font-size: 2rem;
+    color: var(--admin-primary);
+    margin-bottom: 0.75rem;
+}
+
+.upload-area p {
+    color: var(--admin-text-muted);
+    font-size: 0.875rem;
+}
+
+/* ========== Preview Grid ========== */
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.preview-item {
+    position: relative;
+    aspect-ratio: 3/4;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--admin-border);
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.preview-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: var(--admin-danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ========== Chapter List ========== */
+.chapter-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+}
+
+.chapter-item:hover {
+    background: var(--admin-card-hover);
+}
+
+.chapter-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.chapter-number {
+    background: var(--admin-primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.chapter-title {
+    color: var(--admin-text);
+    font-weight: 500;
+}
+
+.chapter-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--admin-text-muted);
+}
+
+.chapter-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ========== Buttons ========== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-dark));
+    color: white;
+    box-shadow: 0 2px 12px var(--admin-primary-glow);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px var(--admin-primary-glow);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--admin-border);
+    color: var(--admin-text);
+}
+
+.btn-secondary:hover {
+    background: var(--admin-primary);
+    border-color: var(--admin-primary);
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--admin-success), #059669);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--admin-danger), #dc2626);
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* ========== Modal ========== */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 20px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.modal-header h3 {
+    color: var(--admin-text);
+    font-size: 1.25rem;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    color: var(--admin-text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-modal:hover {
+    color: var(--admin-danger);
+}
+
+/* ========== Empty State ========== */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--admin-text-muted);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* ========== Loading ========== */
+.loading {
+    text-align: center;
+    padding: 2rem;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--admin-border);
+    border-top-color: var(--admin-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========== Toast ========== */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    color: var(--admin-text);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    z-index: 2000;
+    animation: toastIn 0.3s ease;
+}
+
+.toast.success { border-color: var(--admin-success); }
+.toast.error { border-color: var(--admin-danger); }
+.toast.warning { border-color: var(--admin-warning); }
+
+@keyframes toastIn {
+    from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+    to { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 992px) {
+    .admin-sidebar {
+        transform: translateX(100%);
+    }
+
+    .admin-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .admin-main {
+        margin-right: 0;
+    }
+
+    .admin-mobile-toggle {
+        display: block !important;
+    }
+}
+
+.admin-mobile-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--admin-text);
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+/* ========== Progress Bar ========== */
+.progress-bar {
+    height: 6px;
+    background: var(--admin-border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--admin-primary), var(--admin-success));
+    transition: width 0.3s;
+    border-radius: 3px;
+}
+
+/* ========== Checkbox ========== */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--admin-primary);
+}
+
+/* ========== Status Badge ========== */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-published { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.status-draft { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.status-archived { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+
+/* ========== Quick Actions ========== */
+.quick-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* ========== Manga Search Container ========== */
+.manga-search-container {
+    position: relative;
+}
+
+.search-results-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    border-radius: 10px;
+    margin-top: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.search-results-dropdown.active {
+    display: block;
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid var(--admin-border-light);
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: var(--admin-primary-glow);
+}
+
+.search-result-cover {
+    width: 35px;
+    height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.search-result-info {
+    flex: 1;
+}
+
+.search-result-title {
+    color: var(--admin-text);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.search-result-meta {
+    font-size: 0.75rem;
+    color: var(--admin-text-muted);
+    margin-top: 0.25rem;
+}
+
+.selected-info {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid var(--admin-primary);
+    border-radius: 10px;
+    margin-top: 0.75rem;
+}
+
+/* ========== Manga Quick Add Button ========== */
+.quick-add-chapter-btn {
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+}

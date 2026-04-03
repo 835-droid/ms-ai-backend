@@ -326,21 +326,24 @@ func (r *HybridMangaRepository) ListMostViewed(ctx context.Context, since time.T
 	}
 
 	// Query secondary repository and merge results
+	// In hybrid mode, views are dual-written to both backends, so the same view
+	// exists in both. To avoid double-counting, prefer the primary backend's data
+	// and only use the secondary as a fallback when the primary is missing the manga.
 	if r.secondary != nil {
 		ranked, err := r.secondary.ListMostViewed(ctx, since, 0, fetchLimit)
 		if err == nil {
 			secondarySuccess = true
 			for _, rm := range ranked {
 				idStr := rm.Manga.ID.Hex()
-				if existing, exists := rankedMap[idStr]; exists {
-					// Merge view counts from both backends for the same manga
-					existing.ViewCount += rm.ViewCount
-				} else {
+				if _, exists := rankedMap[idStr]; !exists {
+					// Only add from secondary if primary doesn't have this manga
 					rankedMap[idStr] = &coremanga.RankedManga{
 						Manga:     rm.Manga,
 						ViewCount: rm.ViewCount,
 					}
 				}
+				// If the manga already exists from primary, skip the secondary entry
+				// to avoid double-counting the same mirrored views
 			}
 		} else if r.log != nil {
 			r.log.Error("hybrid secondary list most viewed failed", map[string]interface{}{"error": err.Error()})

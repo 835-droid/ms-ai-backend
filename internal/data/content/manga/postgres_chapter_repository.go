@@ -478,4 +478,116 @@ func (r *PostgresMangaChapterRepository) DeleteChapterComment(ctx context.Contex
 	return nil
 }
 
+// ========== CHAPTER COMMENT REACTIONS ==========
+
+func (r *PostgresMangaChapterRepository) AddChapterCommentReaction(ctx context.Context, reaction *coremanga.ChapterCommentReaction) error {
+	if r == nil || r.store == nil || r.store.DB == nil {
+		return fmt.Errorf("postgres manga chapter repo not initialized")
+	}
+
+	if reaction.ID.IsZero() {
+		reaction.ID = primitive.NewObjectID()
+	}
+	reaction.CreatedAt = time.Now()
+
+	// Check if user already reacted
+	var existingType string
+	err := r.store.DB.GetContext(ctx, &existingType,
+		`SELECT type FROM chapter_comment_reactions WHERE comment_id=$1 AND user_id=$2`,
+		reaction.CommentID.Hex(), reaction.UserID.Hex())
+
+	if err == nil && existingType != "" {
+		// User already reacted - update if different type
+		if existingType != reaction.Type {
+			_, err = r.store.DB.ExecContext(ctx,
+				`UPDATE chapter_comment_reactions SET type=$1 WHERE comment_id=$2 AND user_id=$3`,
+				reaction.Type, reaction.CommentID.Hex(), reaction.UserID.Hex())
+			if err != nil {
+				return fmt.Errorf("update comment reaction: %w", err)
+			}
+			return r.updateCommentReactionCounts(ctx, reaction.CommentID)
+		}
+		return nil
+	}
+
+	// Insert new reaction
+	_, err = r.store.DB.ExecContext(ctx,
+		`INSERT INTO chapter_comment_reactions (id, comment_id, chapter_id, manga_id, user_id, type, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		reaction.ID.Hex(), reaction.CommentID.Hex(), reaction.ChapterID.Hex(), reaction.MangaID.Hex(), reaction.UserID.Hex(), reaction.Type, reaction.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("insert comment reaction: %w", err)
+	}
+
+	return r.updateCommentReactionCounts(ctx, reaction.CommentID)
+}
+
+func (r *PostgresMangaChapterRepository) RemoveChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) error {
+	if r == nil || r.store == nil || r.store.DB == nil {
+		return fmt.Errorf("postgres manga chapter repo not initialized")
+	}
+
+	_, err := r.store.DB.ExecContext(ctx,
+		`DELETE FROM chapter_comment_reactions WHERE comment_id=$1 AND user_id=$2`,
+		commentID.Hex(), userID.Hex())
+	if err != nil {
+		return fmt.Errorf("delete comment reaction: %w", err)
+	}
+
+	return r.updateCommentReactionCounts(ctx, commentID)
+}
+
+func (r *PostgresMangaChapterRepository) GetUserChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) (string, error) {
+	if r == nil || r.store == nil || r.store.DB == nil {
+		return "", fmt.Errorf("postgres manga chapter repo not initialized")
+	}
+
+	var reactionType string
+	err := r.store.DB.GetContext(ctx, &reactionType,
+		`SELECT type FROM chapter_comment_reactions WHERE comment_id=$1 AND user_id=$2`,
+		commentID.Hex(), userID.Hex())
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return "", nil
+		}
+		return "", fmt.Errorf("get comment reaction: %w", err)
+	}
+
+	return reactionType, nil
+}
+
+func (r *PostgresMangaChapterRepository) updateCommentReactionCounts(ctx context.Context, commentID primitive.ObjectID) error {
+	if r == nil || r.store == nil || r.store.DB == nil {
+		return fmt.Errorf("postgres manga chapter repo not initialized")
+	}
+
+	// Count likes
+	var likeCount int64
+	err := r.store.DB.GetContext(ctx, &likeCount,
+		`SELECT COUNT(*) FROM chapter_comment_reactions WHERE comment_id=$1 AND type='like'`,
+		commentID.Hex())
+	if err != nil {
+		return fmt.Errorf("count likes: %w", err)
+	}
+
+	// Count dislikes
+	var dislikeCount int64
+	err = r.store.DB.GetContext(ctx, &dislikeCount,
+		`SELECT COUNT(*) FROM chapter_comment_reactions WHERE comment_id=$1 AND type='dislike'`,
+		commentID.Hex())
+	if err != nil {
+		return fmt.Errorf("count dislikes: %w", err)
+	}
+
+	// Update comment counts
+	_, err = r.store.DB.ExecContext(ctx,
+		`UPDATE chapter_comments SET like_count=$1, dislike_count=$2 WHERE id=$3`,
+		likeCount, dislikeCount, commentID.Hex())
+	if err != nil {
+		return fmt.Errorf("update comment counts: %w", err)
+	}
+
+	return nil
+}
+
 // ----- END OF FILE: backend/MS-AI/internal/data/postgres/manga_chapter_repo.go -----

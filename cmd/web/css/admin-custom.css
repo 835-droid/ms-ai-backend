@@ -1,4 +1,4 @@
-/* admin-custom.css - تحسينات إضافية للوحة الإدارة (داكنة) */
+/* admin-custom.css - تحسينات إضافية للوحة الإدارة (كحلي حصري) */
 .status-badge {
     display: inline-block;
     padding: 0.2rem 0.6rem;
@@ -8,17 +8,17 @@
 }
 .status-published { background: #10b981; color: white; }
 .status-draft { background: #f59e0b; color: white; }
-.status-archived { background: #6b7280; color: white; }
+.status-archived { background: #64748b; color: white; }
 
-/* تحسين شريط التمرير */
+/* تحسين شريط التمرير - ألوان كحلية */
 ::-webkit-scrollbar {
     width: 6px;
 }
 ::-webkit-scrollbar-track {
-    background: #1e293b;
+    background: #0f1629;
 }
 ::-webkit-scrollbar-thumb {
-    background: #3b82f6;
+    background: linear-gradient(180deg, #7c3aed, #06b6d4);
     border-radius: 10px;
 }
 
@@ -33,10 +33,10 @@
     transition: all 0.2s;
 }
 
-/* تحسين حقول الإدخال المتعددة */
+/* تحسين حقول الإدخال المتعددة - كحلي */
 select[multiple] {
-    background: #0f172a;
-    border: 1px solid #2d3a4a;
+    background: #0d1224;
+    border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 /* تنسيق التبويبات الداخلية */

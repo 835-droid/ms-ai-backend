@@ -431,4 +431,71 @@ func (r *HybridMangaChapterRepository) DeleteChapterComment(ctx context.Context,
 	return nil
 }
 
+// ========== CHAPTER COMMENT REACTIONS ==========
+
+func (r *HybridMangaChapterRepository) AddChapterCommentReaction(ctx context.Context, reaction *coremanga.ChapterCommentReaction) error {
+	var errPrimary, errSecondary error
+	if r.primary != nil {
+		errPrimary = r.primary.AddChapterCommentReaction(ctx, reaction)
+		if errPrimary != nil && r.log != nil {
+			r.log.Error("hybrid primary add chapter comment reaction failed", map[string]interface{}{"error": errPrimary.Error()})
+		}
+	}
+	if r.secondary != nil {
+		errSecondary = r.secondary.AddChapterCommentReaction(ctx, reaction)
+		if errSecondary != nil && r.log != nil {
+			r.log.Error("hybrid secondary add chapter comment reaction failed", map[string]interface{}{"error": errSecondary.Error()})
+		}
+	}
+	if errPrimary != nil && r.primary != nil && errSecondary != nil && r.secondary != nil {
+		return errors.New("hybrid add chapter comment reaction failed on all backends")
+	}
+	if errPrimary != nil && r.primary != nil && r.secondary == nil {
+		return errPrimary
+	}
+	if errSecondary != nil && r.primary == nil && r.secondary != nil {
+		return errSecondary
+	}
+	return nil
+}
+
+func (r *HybridMangaChapterRepository) RemoveChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) error {
+	var errPrimary, errSecondary error
+	if r.primary != nil {
+		errPrimary = r.primary.RemoveChapterCommentReaction(ctx, commentID, userID)
+		if errPrimary != nil && r.log != nil {
+			r.log.Error("hybrid primary remove chapter comment reaction failed", map[string]interface{}{"error": errPrimary.Error()})
+		}
+	}
+	if r.secondary != nil {
+		errSecondary = r.secondary.RemoveChapterCommentReaction(ctx, commentID, userID)
+		if errSecondary != nil && r.log != nil {
+			r.log.Error("hybrid secondary remove chapter comment reaction failed", map[string]interface{}{"error": errSecondary.Error()})
+		}
+	}
+	if errPrimary != nil && r.primary != nil && errSecondary != nil && r.secondary != nil {
+		return errors.New("hybrid remove chapter comment reaction failed on all backends")
+	}
+	if errPrimary != nil && r.primary != nil && r.secondary == nil {
+		return errPrimary
+	}
+	if errSecondary != nil && r.primary == nil && r.secondary != nil {
+		return errSecondary
+	}
+	return nil
+}
+
+func (r *HybridMangaChapterRepository) GetUserChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) (string, error) {
+	if r.primary != nil {
+		reaction, err := r.primary.GetUserChapterCommentReaction(ctx, commentID, userID)
+		if err == nil {
+			return reaction, nil
+		}
+	}
+	if r.secondary != nil {
+		return r.secondary.GetUserChapterCommentReaction(ctx, commentID, userID)
+	}
+	return "", errors.New("no repositories available")
+}
+
 // ----- END OF FILE: backend/MS-AI/internal/data/content/manga/hybrid_chapter_repo.go -----

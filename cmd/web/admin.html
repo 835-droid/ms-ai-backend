@@ -4,559 +4,478 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MS-AI | لوحة الإدارة المتقدمة</title>
-    <link rel="stylesheet" href="css/admin-custom.css">
-    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/base.css?v=20260404">
+    <link rel="stylesheet" href="css/modern.css?v=20260404">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/manga.css">
     <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/admin.css?v=20260404">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        /* تحسينات مخصصة للوحة الإدارة - الوضع الداكن فقط */
-        :root {
-            --admin-bg: #0a0c10;
-            --admin-card: #12161e;
-            --admin-card-hover: #1a1f2a;
-            --admin-border: #1e2a3a;
-            --admin-border-light: #2d3a4a;
-            --admin-text: #e2e8f0;
-            --admin-text-muted: #8ba0b5;
-            --admin-primary: #3b82f6;
-            --admin-primary-dark: #2563eb;
-            --admin-primary-glow: rgba(59, 130, 246, 0.2);
-            --admin-success: #10b981;
-            --admin-danger: #ef4444;
-            --admin-warning: #f59e0b;
-            --admin-input-bg: #0f172a;
-            --admin-input-border: #2d3a4a;
-        }
-
-        body {
-            background: var(--admin-bg);
-            padding-top: 0;
-        }
-        body.dark-mode {
-            --admin-bg: #0a0c10;
-            --admin-card: #12161e;
-        }
-        /* فرض الوضع الداكن دائماً */
-        body, body.dark-mode {
-            background: var(--admin-bg);
-        }
-        .page-card {
-            background: var(--admin-card);
-            border: 1px solid var(--admin-border);
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        }
-        .stat-card-admin {
-            background: var(--admin-card);
-            border: 1px solid var(--admin-border);
-            transition: all 0.2s;
-        }
-        .stat-card-admin:hover {
-            background: var(--admin-card-hover);
-            border-color: var(--admin-primary);
-        }
-        .stat-number-admin {
-            color: var(--admin-primary);
-            font-size: 2rem;
-        }
-        .btn-primary {
-            background: var(--admin-primary);
-            box-shadow: 0 2px 8px var(--admin-primary-glow);
-        }
-        .btn-primary:hover {
-            background: var(--admin-primary-dark);
-        }
-        .btn-secondary {
-            background: #1e293b;
-            border: 1px solid var(--admin-border-light);
-            color: var(--admin-text);
-        }
-        .btn-secondary:hover {
-            background: #2d3a4a;
-            border-color: var(--admin-primary);
-        }
-        .form-section {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid var(--admin-border);
-            border-radius: 16px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .form-section h3 {
-            font-size: 1.1rem;
-            margin-bottom: 1.25rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--admin-border);
-            color: var(--admin-primary);
-        }
-        input, textarea, select {
-            background: var(--admin-input-bg);
-            border: 1px solid var(--admin-input-border);
-            color: var(--admin-text);
-        }
-        input:focus, textarea:focus, select:focus {
-            border-color: var(--admin-primary);
-            box-shadow: 0 0 0 2px var(--admin-primary-glow);
-        }
-        .upload-preview {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            margin: 1rem 0;
-            padding: 1rem;
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-        }
-        .preview-item {
-            position: relative;
-            width: 80px;
-            height: 100px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--admin-border);
-        }
-        .preview-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .preview-item .remove-preview {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background: var(--admin-danger);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .modal-tabs {
-            display: flex;
-            gap: 0.5rem;
-            border-bottom: 1px solid var(--admin-border);
-            margin-bottom: 1.5rem;
-        }
-        .modal-tab {
-            background: none;
-            border: none;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            color: var(--admin-text-muted);
-            font-weight: 600;
-        }
-        .modal-tab.active {
-            color: var(--admin-primary);
-            border-bottom: 2px solid var(--admin-primary);
-        }
-        .modal-tab-content {
-            display: none;
-        }
-        .modal-tab-content.active {
-            display: block;
-        }
-        .progress-container {
-            margin-top: 0.5rem;
-            background: var(--admin-border);
-            border-radius: 20px;
-            overflow: hidden;
-        }
-        .progress-bar {
-            height: 6px;
-            background: linear-gradient(90deg, var(--admin-primary), var(--admin-success));
-            width: 0%;
-            transition: width 0.3s;
-        }
-        .file-upload-area {
-            border: 2px dashed var(--admin-border);
-            background: rgba(0,0,0,0.2);
-        }
-        .file-upload-area:hover {
-            border-color: var(--admin-primary);
-            background: var(--admin-primary-glow);
-        }
-        .manga-admin-item {
-            background: var(--admin-card);
-            border: 1px solid var(--admin-border);
-            border-radius: 12px;
-            margin-bottom: 0.75rem;
-        }
-        .manga-admin-item:hover {
-            background: var(--admin-card-hover);
-            border-color: var(--admin-primary);
-        }
-        .admin-panel {
-            background: var(--admin-card);
-            border: 1px solid var(--admin-border);
-            border-radius: 16px;
-        }
-        .cover-preview img {
-            max-width: 100px;
-            border-radius: 8px;
-            margin-top: 0.5rem;
-        }
-        @media (max-width: 768px) {
-            .form-section {
-                padding: 1rem;
-            }
-        }
-    </style>
 </head>
 <body class="dark-mode">
+    <!-- Navbar -->
     <nav class="navbar">
         <a href="dashboard.html" class="navbar-brand"><i class="fas fa-book"></i> MS-AI</a>
         <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
-        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li><li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li><li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li></ul>
-        <div class="navbar-right"><button class="dark-mode-toggle"></button><button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button><div class="navbar-user-badge"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></div></div>
+        <ul class="navbar-menu">
+            <li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li>
+            <li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li>
+            <li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li>
+            <li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li>
+            <li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li>
+        </ul>
+        <div class="navbar-right">
+            <button class="dark-mode-toggle"></button>
+            <button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
+            <div class="navbar-user-badge">
+                <span id="user-display-name">مستخدم</span>
+                <div class="navbar-user-avatar">AD</div>
+            </div>
+        </div>
     </nav>
-    <main class="page-shell">
-        <section class="page-card">
-            <div class="page-header">
-                <div>
-                    <h1><i class="fas fa-crown"></i> لوحة الإدارة المتقدمة</h1>
-                    <p>إدارة متكاملة للمانجا والفصول والمؤلفين</p>
-                </div>
+
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="admin-sidebar">
+        <div class="admin-sidebar-header">
+            <h3><i class="fas fa-cog"></i> الإدارة</h3>
+        </div>
+        <nav>
+            <a class="admin-nav-item active" data-section="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span>لوحة التحكم</span>
+            </a>
+            <a class="admin-nav-item" data-section="mangas">
+                <i class="fas fa-book"></i>
+                <span>إدارة المانجا</span>
+            </a>
+            <a class="admin-nav-item" data-section="add-manga">
+                <i class="fas fa-plus-circle"></i>
+                <span>إضافة مانجا</span>
+            </a>
+            <a class="admin-nav-item" data-section="chapters">
+                <i class="fas fa-layer-group"></i>
+                <span>إدارة الفصول</span>
+            </a>
+            <a class="admin-nav-item" data-section="bulk">
+                <i class="fas fa-upload"></i>
+                <span>الرفع الجماعي</span>
+            </a>
+            <a class="admin-nav-item" data-section="authors">
+                <i class="fas fa-users"></i>
+                <span>إدارة المؤلفين</span>
+            </a>
+            <a class="admin-nav-item" data-section="settings">
+                <i class="fas fa-sliders-h"></i>
+                <span>الإعدادات</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Mobile Toggle -->
+        <button class="admin-mobile-toggle" id="admin-mobile-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Dashboard Section -->
+        <section id="section-dashboard" class="admin-section active">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-line"></i> لوحة التحكم</h2>
             </div>
 
-            <div id="admin-message" class="message"></div>
-
-            <!-- إحصائيات سريعة -->
-            <div class="stats-cards" id="stats-cards">
+            <!-- Stats -->
+            <div class="stats-grid" id="stats-grid">
                 <div class="stat-card-admin">
+                    <div class="stat-icon mangas"><i class="fas fa-book"></i></div>
                     <div class="stat-number-admin" id="stat-total-mangas">0</div>
                     <div class="stat-label-admin">إجمالي المانجا</div>
                 </div>
                 <div class="stat-card-admin">
+                    <div class="stat-icon chapters"><i class="fas fa-layer-group"></i></div>
                     <div class="stat-number-admin" id="stat-total-chapters">0</div>
                     <div class="stat-label-admin">إجمالي الفصول</div>
                 </div>
                 <div class="stat-card-admin">
+                    <div class="stat-icon views"><i class="fas fa-eye"></i></div>
                     <div class="stat-number-admin" id="stat-total-views">0</div>
                     <div class="stat-label-admin">إجمالي المشاهدات</div>
                 </div>
                 <div class="stat-card-admin">
+                    <div class="stat-icon likes"><i class="fas fa-heart"></i></div>
                     <div class="stat-number-admin" id="stat-total-likes">0</div>
                     <div class="stat-label-admin">إجمالي الإعجابات</div>
                 </div>
             </div>
 
-            <!-- التبويبات الرئيسية -->
-            <div class="tabs">
-                <button type="button" class="tab-button active" data-tab="mangas"><i class="fas fa-book"></i> إدارة المانجا</button>
-                <button type="button" class="tab-button" data-tab="add-manga"><i class="fas fa-plus-circle"></i> إضافة مانجا</button>
-                <button type="button" class="tab-button" data-tab="chapters"><i class="fas fa-layer-group"></i> إدارة الفصول</button>
-                <button type="button" class="tab-button" data-tab="bulk"><i class="fas fa-upload"></i> رفع جماعي</button>
-                <button type="button" class="tab-button" data-tab="authors"><i class="fas fa-users"></i> إدارة المؤلفين</button>
-            </div>
-
-            <!-- ========== تبويب إدارة المانجا ========== -->
-            <div id="tab-mangas" class="tab-content active">
-                <div class="search-filter-bar">
-                    <input type="text" id="search-manga" placeholder="🔍 بحث في المانجا..." class="form-control">
-                    <select id="filter-status" class="form-control">
-                        <option value="all">جميع الحالات</option>
-                        <option value="published">منشور</option>
-                        <option value="draft">مسودة</option>
-                        <option value="archived">مؤرشف</option>
-                    </select>
-                    <select id="filter-author" class="form-control">
-                        <option value="all">جميع المؤلفين</option>
-                    </select>
-                    <button id="batch-delete-btn" class="btn btn-danger" disabled><i class="fas fa-trash-alt"></i> حذف محددة</button>
-                </div>
-                
-                <div class="batch-actions">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="select-all-mangas"> تحديد الكل
-                    </label>
-                    <span id="selected-count" class="text-muted">0 مانجا محددة</span>
-                </div>
-                
-                <div id="manga-list-container" class="manga-list-admin"></div>
-                <div id="manga-pagination" class="pagination-container"></div>
-            </div>
-
-            <!-- ========== تبويب إضافة مانجا (محسن) ========== -->
-            <div id="tab-add-manga" class="tab-content">
-                <form id="add-manga-form">
-                    <div class="form-section">
-                        <h3><i class="fas fa-info-circle"></i> المعلومات الأساسية</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>عنوان المانجا *</label>
-                                <input id="manga-title" type="text" required>
-                            </div>
-                            <div class="form-group">
-                                <label>المؤلف</label>
-                                <select id="manga-author">
-                                    <option value="">اختر المؤلف</option>
-                                </select>
-                                <button type="button" id="add-new-author-btn" class="btn-sm btn-secondary" style="margin-top:0.5rem;">+ إضافة مؤلف جديد</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>الوصف *</label>
-                            <textarea id="manga-description" rows="4" required></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h3><i class="fas fa-image"></i> الغلاف والمعرض</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>رابط صورة الغلاف</label>
-                                <input id="manga-cover-url" type="text" placeholder="https://...">
-                                <div id="cover-preview" class="cover-preview"></div>
-                            </div>
-                            <div class="form-group">
-                                <label>معرض الصور (روابط إضافية)</label>
-                                <textarea id="manga-gallery" rows="3" placeholder="كل رابط في سطر"></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h3><i class="fas fa-tags"></i> التصنيفات والعلامات</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>التصنيفات</label>
-                                <select id="manga-categories" multiple size="5">
-                                    <option value="action">أكشن</option>
-                                    <option value="adventure">مغامرة</option>
-                                    <option value="comedy">كوميدي</option>
-                                    <option value="drama">دراما</option>
-                                    <option value="fantasy">فانتازيا</option>
-                                    <option value="horror">رعب</option>
-                                    <option value="romance">رومانسي</option>
-                                    <option value="sci-fi">خيال علمي</option>
-                                    <option value="sports">رياضي</option>
-                                    <option value="tragedy">تراجيدي</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>العلامات المخصصة</label>
-                                <input id="manga-tags-input" type="text" placeholder="اكتب علامة ثم Enter">
-                                <div id="tags-container" class="tags-wrap"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-section">
-                        <h3><i class="fas fa-sliders-h"></i> إعدادات إضافية</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>سنة الإنتاج</label>
-                                <input id="manga-year" type="number" placeholder="مثال: 2021">
-                            </div>
-                            <div class="form-group">
-                                <label>الحالة</label>
-                                <select id="manga-status">
-                                    <option value="published">منشور</option>
-                                    <option value="draft">مسودة</option>
-                                    <option value="archived">مؤرشف</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>الكلمات المفتاحية (SEO)</label>
-                                <input id="manga-keywords" type="text" placeholder="كلمة1, كلمة2">
-                            </div>
-                        </div>
-                    </div>
-
-                    <button id="add-manga-button" class="btn btn-primary" type="submit">
-                        <i class="fas fa-save"></i> إضافة المانجا
+            <!-- Quick Actions -->
+            <div class="admin-card">
+                <h3 style="color: var(--admin-text); margin-bottom: 1rem;"><i class="fas fa-bolt" style="color: var(--admin-primary);"></i> إجراءات سريعة</h3>
+                <div class="quick-actions">
+                    <button class="btn btn-primary" onclick="switchSection('add-manga')">
+                        <i class="fas fa-plus"></i> إضافة مانجا جديدة
                     </button>
-                </form>
-            </div>
-
-            <!-- ========== تبويب إدارة الفصول (محسن) ========== -->
-            <div id="tab-chapters" class="tab-content">
-                <div class="admin-layout" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
-                    <div class="admin-panel">
-                        <div class="form-group">
-                            <label><i class="fas fa-book"></i> اختر المانجا</label>
-                            <select id="chapter-manga-id"></select>
-                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-                                <button id="edit-manga-btn" class="btn btn-secondary" type="button">
-                                    <i class="fas fa-edit"></i> تعديل هذه المانجا
-                                </button>
-                                <button id="delete-manga-btn" class="btn btn-danger" type="button">
-                                    <i class="fas fa-trash"></i> حذف المانجا
-                                </button>
-                            </div>
-                        </div>
-
-                        <form id="add-chapter-form">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>رقم الفصل *</label>
-                                    <input id="chapter-number" type="number" min="1" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>عنوان الفصل</label>
-                                    <input id="chapter-title" type="text">
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>رفع الصور (متعدد)</label>
-                                <div class="file-upload-area" id="chapter-upload-area">
-                                    <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>اسحب الصور هنا أو انقر للاختيار</p>
-                                    <input type="file" id="chapter-image-files" accept="image/*" multiple hidden>
-                                    <button type="button" id="select-files-button" class="btn btn-secondary">اختر الصور</button>
-                                </div>
-                                <div id="upload-preview" class="upload-preview"></div>
-                                <button type="button" id="upload-chapter-images-button" class="btn btn-primary">رفع الصور وإضافتها</button>
-                                <div id="upload-progress" class="progress-container" style="display:none;">
-                                    <div class="progress-bar"></div>
-                                    <div class="progress-text" style="font-size:0.7rem; margin-top:0.25rem;"></div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>روابط الصور (كل رابط في سطر)</label>
-                                <textarea id="chapter-urls" rows="6" placeholder="يمكنك تعديل الروابط يدوياً"></textarea>
-                            </div>
-                            
-                            <button id="add-chapter-button" class="btn btn-success" type="submit">
-                                <i class="fas fa-plus-circle"></i> حفظ الفصل
-                            </button>
-                        </form>
-                    </div>
-
-                    <div class="admin-panel">
-                        <h3><i class="fas fa-list"></i> الفصول الحالية</h3>
-                        <div id="admin-chapter-list" class="admin-list"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ========== تبويب الرفع الجماعي ========== -->
-            <div id="tab-bulk" class="tab-content">
-                <div class="bulk-upload-area" id="bulk-upload-area">
-                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--admin-primary);"></i>
-                    <p>اسحب وأفلت ملف JSON هنا أو انقر للاختيار</p>
-                    <input type="file" id="bulk-file-input" accept=".json" style="display: none;">
-                </div>
-                <button id="export-data-btn" class="btn btn-secondary" style="margin-top: 1rem;">
-                    <i class="fas fa-download"></i> تصدير جميع البيانات (JSON)
-                </button>
-                <div id="bulk-progress" style="margin-top: 1rem; display: none;">
-                    <div class="progress-container">
-                        <div class="progress-bar" id="bulk-progress-fill"></div>
-                    </div>
-                    <p id="bulk-status" style="text-align: center; margin-top: 0.5rem;"></p>
-                </div>
-            </div>
-
-            <!-- ========== تبويب إدارة المؤلفين ========== -->
-            <div id="tab-authors" class="tab-content">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                    <h3><i class="fas fa-users"></i> قائمة المؤلفين</h3>
-                    <button id="add-author-btn" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> إضافة مؤلف
+                    <button class="btn btn-success" onclick="switchSection('chapters')">
+                        <i class="fas fa-upload"></i> رفع فصل
+                    </button>
+                    <button class="btn btn-secondary" onclick="switchSection('bulk')">
+                        <i class="fas fa-file-import"></i> استيراد بيانات
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportData()">
+                        <i class="fas fa-download"></i> تصدير البيانات
                     </button>
                 </div>
-                <div id="authors-list" class="admin-list"></div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="admin-card">
+                <h3 style="color: var(--admin-text); margin-bottom: 1rem;"><i class="fas fa-clock" style="color: var(--admin-primary);"></i> آخر النشاطات</h3>
+                <div id="recent-activity">
+                    <div class="loading"><div class="loading-spinner"></div></div>
+                </div>
             </div>
         </section>
-    </main>
 
-    <!-- ========== مودال تعديل المانجا المتقدم ========== -->
-    <div id="editMangaModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width: 800px;">
-            <span class="close-modal">&times;</span>
-            <h2><i class="fas fa-edit"></i> تعديل المانجا</h2>
-            <div class="modal-tabs">
-                <button type="button" class="modal-tab active" data-edit-tab="basic">أساسيات</button>
-                <button type="button" class="modal-tab" data-edit-tab="media">الوسائط</button>
-                <button type="button" class="modal-tab" data-edit-tab="taxonomy">تصنيفات</button>
+        <!-- Mangas Section -->
+        <section id="section-mangas" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-book"></i> إدارة المانجا</h2>
+                <button class="btn btn-primary" onclick="switchSection('add-manga')">
+                    <i class="fas fa-plus"></i> إضافة مانجا
+                </button>
             </div>
-            <form id="edit-manga-form">
-                <div id="edit-basic" class="modal-tab-content active">
-                    <div class="form-row">
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <input type="text" id="search-manga" placeholder="🔍 بحث عن مانجا..." style="flex: 1;">
+                <select id="filter-status">
+                    <option value="all">جميع الحالات</option>
+                    <option value="published">منشور</option>
+                    <option value="draft">مسودة</option>
+                    <option value="archived">مؤرشف</option>
+                </select>
+                <select id="filter-author">
+                    <option value="all">جميع المؤلفين</option>
+                </select>
+                <button id="batch-delete-btn" class="btn btn-danger" disabled>
+                    <i class="fas fa-trash"></i> حذف المحدد
+                </button>
+            </div>
+
+            <!-- Batch Actions -->
+            <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="select-all-mangas"> تحديد الكل
+                </label>
+                <span id="selected-count" style="color: var(--admin-text-muted); font-size: 0.875rem;">0 مانجا محددة</span>
+            </div>
+
+            <!-- Manga List -->
+            <div id="manga-list-container">
+                <div class="loading"><div class="loading-spinner"></div><p style="color: var(--admin-text-muted);">جاري تحميل المانجا...</p></div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="manga-pagination" style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem;"></div>
+        </section>
+
+        <!-- Add Manga Section -->
+        <section id="section-add-manga" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-plus-circle"></i> إضافة مانجا جديدة</h2>
+            </div>
+
+            <form id="add-manga-form">
+                <div class="admin-form">
+                    <!-- Basic Info -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-info-circle"></i> المعلومات الأساسية</h3>
                         <div class="form-group">
                             <label>عنوان المانجا *</label>
-                            <input id="edit-manga-title" type="text" required>
+                            <input id="manga-title" type="text" required placeholder="اكتب عنوان المانجا...">
                         </div>
                         <div class="form-group">
                             <label>المؤلف</label>
-                            <select id="edit-manga-author"></select>
+                            <select id="manga-author">
+                                <option value="">اختر المؤلف</option>
+                            </select>
+                            <button type="button" id="add-new-author-btn" class="btn btn-sm btn-secondary" style="margin-top: 0.5rem;">
+                                <i class="fas fa-plus"></i> إضافة مؤلف جديد
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label>الوصف *</label>
+                            <textarea id="manga-description" rows="4" required placeholder="وصف المانجا..."></textarea>
                         </div>
                     </div>
-                    <div class="form-row">
+
+                    <!-- Cover & Gallery -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-image"></i> الغلاف والمعرض</h3>
+                        <div class="form-group">
+                            <label>رابط صورة الغلاف</label>
+                            <input id="manga-cover-url" type="text" placeholder="https://...">
+                            <div id="cover-preview" class="preview-grid"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>معرض الصور (روابط إضافية)</label>
+                            <textarea id="manga-gallery" rows="3" placeholder="كل رابط في سطر"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Categories & Tags -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-tags"></i> التصنيفات والعلامات</h3>
+                        <div class="form-group">
+                            <label>التصنيفات</label>
+                            <select id="manga-categories" multiple size="6">
+                                <option value="action">أكشن</option>
+                                <option value="adventure">مغامرة</option>
+                                <option value="comedy">كوميدي</option>
+                                <option value="drama">دراما</option>
+                                <option value="fantasy">فانتازيا</option>
+                                <option value="horror">رعب</option>
+                                <option value="romance">رومانسي</option>
+                                <option value="sci-fi">خيال علمي</option>
+                                <option value="sports">رياضي</option>
+                                <option value="tragedy">تراجيدي</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>العلامات المخصصة</label>
+                            <input id="manga-tags-input" type="text" placeholder="اكتب علامة ثم اضغط Enter">
+                            <div id="tags-container" class="tags-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Settings -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-sliders-h"></i> إعدادات إضافية</h3>
                         <div class="form-group">
                             <label>سنة الإنتاج</label>
-                            <input id="edit-manga-year" type="number">
+                            <input id="manga-year" type="number" placeholder="2024">
                         </div>
                         <div class="form-group">
                             <label>الحالة</label>
-                            <select id="edit-manga-status">
+                            <select id="manga-status">
                                 <option value="published">منشور</option>
                                 <option value="draft">مسودة</option>
                                 <option value="archived">مؤرشف</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>الوصف</label>
-                        <textarea id="edit-manga-description" rows="4" required></textarea>
-                    </div>
-                </div>
-                <div id="edit-media" class="modal-tab-content">
-                    <div class="form-group">
-                        <label>رابط الغلاف</label>
-                        <input id="edit-manga-cover" type="text">
-                        <div id="edit-cover-preview" class="cover-preview"></div>
-                    </div>
-                    <div class="form-group">
-                        <label>معرض الصور (روابط)</label>
-                        <textarea id="edit-manga-gallery" rows="3" placeholder="كل رابط في سطر"></textarea>
+                        <div class="form-group">
+                            <label>الكلمات المفتاحية (SEO)</label>
+                            <input id="manga-keywords" type="text" placeholder="كلمة1, كلمة2">
+                        </div>
                     </div>
                 </div>
-                <div id="edit-taxonomy" class="modal-tab-content">
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> حفظ المانجا
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetAddMangaForm()">
+                        <i class="fas fa-redo"></i> إعادة تعيين
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Chapters Section - Improved Layout -->
+        <section id="section-chapters" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-layer-group"></i> إدارة الفصول</h2>
+            </div>
+
+            <!-- Quick Add from Manga List -->
+            <div class="admin-card">
+                <h3 style="color: var(--admin-text); margin-bottom: 1rem;"><i class="fas fa-bolt" style="color: var(--admin-warning);"></i> الإضافة السريعة</h3>
+                <p style="color: var(--admin-text-muted); margin-bottom: 1rem; font-size: 0.875rem;">
+                    اختر مانجا من القائمة أدناه لإضافة فصل جديد مباشرة
+                </p>
+                <div class="filter-bar">
+                    <input type="text" id="quick-add-search" placeholder="🔍 ابحث عن مانجا..." style="flex: 1;">
+                    <select id="quick-add-filter">
+                        <option value="all">جميع الحالات</option>
+                        <option value="published">منشور</option>
+                        <option value="draft">مسودة</option>
+                    </select>
+                </div>
+                <div id="quick-add-manga-list" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+                    <div class="loading"><div class="loading-spinner"></div></div>
+                </div>
+            </div>
+
+            <!-- Add Chapter Form (shown when manga is selected) -->
+            <div id="add-chapter-panel" class="admin-card" style="display: none;">
+                <div class="section-header" style="margin-bottom: 1rem;">
+                    <h3 style="color: var(--admin-text); margin: 0;"><i class="fas fa-plus-circle" style="color: var(--admin-primary);"></i> إضافة فصل جديد</h3>
+                    <button id="cancel-chapter-add" class="btn btn-sm btn-secondary">إلغاء</button>
+                </div>
+
+                <div id="selected-manga-header" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(124, 58, 237, 0.1); border-radius: 12px; margin-bottom: 1.5rem;">
+                    <img id="selected-manga-cover-lg" src="" alt="" style="width: 60px; height: 80px; border-radius: 10px; object-fit: cover;">
+                    <div>
+                        <div id="selected-manga-title-lg" style="color: var(--admin-text); font-weight: 700; font-size: 1.1rem;"></div>
+                        <div id="selected-manga-meta" style="color: var(--admin-text-muted); font-size: 0.85rem; margin-top: 0.25rem;"></div>
+                    </div>
+                </div>
+
+                <form id="add-chapter-form">
+                    <input type="hidden" id="chapter-manga-id">
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label>رقم الفصل *</label>
+                            <input id="chapter-number" type="number" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>عنوان الفصل</label>
+                            <input id="chapter-title" type="text" placeholder="عنوان الفصل...">
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label>العلامات المخصصة</label>
-                        <input id="edit-manga-tags-input" type="text" placeholder="اكتب علامة ثم Enter">
-                        <div id="edit-tags-container" class="tags-wrap"></div>
+                        <label>روابط الصور (كل رابط في سطر)</label>
+                        <textarea id="chapter-urls" rows="8" placeholder="https://image1.jpg&#10;https://image2.jpg"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>أو رفع الصور</label>
+                        <div class="upload-area" id="chapter-upload-area">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>اسحب الصور هنا أو انقر للاختيار</p>
+                            <input type="file" id="chapter-image-files" accept="image/*" multiple hidden>
+                        </div>
+                        <div id="upload-preview" class="preview-grid"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                        <i class="fas fa-save"></i> حفظ الفصل
+                    </button>
+                </form>
+            </div>
+
+            <!-- Chapters List -->
+            <div id="chapters-view-panel" class="admin-card" style="display: none;">
+                <div class="section-header" style="margin-bottom: 1rem;">
+                    <h3 style="color: var(--admin-text); margin: 0;"><i class="fas fa-list" style="color: var(--admin-primary);"></i> فصول المانجا</h3>
+                    <button id="close-chapters-view" class="btn btn-sm btn-secondary">إغلاق</button>
+                </div>
+                <div id="admin-chapter-list"></div>
+            </div>
+        </section>
+
+        <!-- Bulk Upload Section -->
+        <section id="section-bulk" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-upload"></i> الرفع الجماعي</h2>
+            </div>
+
+            <div class="admin-card" style="text-align: center;">
+                <div class="upload-area" id="bulk-upload-area" style="max-width: 500px; margin: 0 auto;">
+                    <i class="fas fa-file-import" style="font-size: 3rem;"></i>
+                    <p>اسحب ملف JSON هنا أو انقر للاختيار</p>
+                    <input type="file" id="bulk-file-input" accept=".json" style="display: none;">
+                </div>
+                <div id="bulk-progress" style="display: none; max-width: 500px; margin: 1rem auto;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="bulk-progress-fill"></div>
+                    </div>
+                    <p id="bulk-status" style="font-size: 0.875rem; color: var(--admin-text-muted); margin-top: 0.5rem;"></p>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <h3 style="color: var(--admin-text); margin-bottom: 1rem;"><i class="fas fa-download" style="color: var(--admin-primary);"></i> تصدير البيانات</h3>
+                <p style="color: var(--admin-text-muted); margin-bottom: 1rem;">قم بتصدير جميع بيانات المانجا والفصول بصيغة JSON</p>
+                <button id="export-data-btn" class="btn btn-secondary">
+                    <i class="fas fa-download"></i> تصدير جميع البيانات
+                </button>
+            </div>
+        </section>
+
+        <!-- Authors Section -->
+        <section id="section-authors" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-users"></i> إدارة المؤلفين</h2>
+                <button id="add-author-btn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> إضافة مؤلف
+                </button>
+            </div>
+
+            <div id="authors-list">
+                <div class="loading"><div class="loading-spinner"></div><p style="color: var(--admin-text-muted);">جاري تحميل المؤلفين...</p></div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="section-settings" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-sliders-h"></i> الإعدادات</h2>
+            </div>
+
+            <div class="admin-card">
+                <h3 style="color: var(--admin-text); margin-bottom: 1rem;"><i class="fas fa-cog" style="color: var(--admin-primary);"></i> إعدادات عامة</h3>
+                <div class="form-group">
+                    <label>عنوان الموقع</label>
+                    <input type="text" value="MS-AI Manga Platform">
+                </div>
+                <div class="form-group">
+                    <label>الوصف التعريفي</label>
+                    <textarea rows="3">أفضل منصة لقراءة المانجا العربية</textarea>
+                </div>
+                <button class="btn btn-primary"><i class="fas fa-save"></i> حفظ الإعدادات</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Edit Manga Modal -->
+    <div id="editMangaModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> تعديل المانجا</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="edit-manga-form">
+                <input type="hidden" id="edit-manga-id">
+                <div class="form-group">
+                    <label>عنوان المانجا *</label>
+                    <input id="edit-manga-title" type="text" required>
+                </div>
+                <div class="form-group">
+                    <label>الوصف</label>
+                    <textarea id="edit-manga-description" rows="4"></textarea>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>سنة الإنتاج</label>
+                        <input id="edit-manga-year" type="number">
                     </div>
                     <div class="form-group">
-                        <label>التصنيفات</label>
-                        <select id="edit-manga-categories" multiple size="5">
-                            <option value="action">أكشن</option>
-                            <option value="adventure">مغامرة</option>
-                            <option value="comedy">كوميدي</option>
-                            <option value="drama">دراما</option>
-                            <option value="fantasy">فانتازيا</option>
-                            <option value="horror">رعب</option>
-                            <option value="romance">رومانسي</option>
-                            <option value="sci-fi">خيال علمي</option>
+                        <label>الحالة</label>
+                        <select id="edit-manga-status">
+                            <option value="published">منشور</option>
+                            <option value="draft">مسودة</option>
+                            <option value="archived">مؤرشف</option>
                         </select>
                     </div>
                 </div>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
-                    <button type="button" id="delete-manga-permanent-btn" class="btn btn-danger">
-                        <i class="fas fa-trash-alt"></i> حذف المانجا نهائياً
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> حفظ التعديلات
-                    </button>
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> حفظ التعديلات</button>
+                    <button type="button" id="delete-manga-permanent-btn" class="btn btn-danger"><i class="fas fa-trash"></i> حذف نهائياً</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ========== مودال تعديل الفصل ========== -->
-    <div id="editChapterModal" class="modal" style="display:none;">
+    <!-- Edit Chapter Modal -->
+    <div id="editChapterModal" class="modal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>تعديل الفصل</h2>
+            <div class="modal-header">
+                <h3>تعديل الفصل</h3>
+                <button class="close-modal">&times;</button>
+            </div>
             <form id="edit-chapter-form">
                 <input type="hidden" id="edit-chapter-id">
                 <div class="form-group">
@@ -568,7 +487,7 @@
                     <input id="edit-chapter-number" type="number" min="1" required>
                 </div>
                 <div class="form-group">
-                    <label>روابط الصور (كل رابط في سطر)</label>
+                    <label>روابط الصور</label>
                     <textarea id="edit-chapter-urls" rows="10" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary">حفظ التعديلات</button>
@@ -576,11 +495,13 @@
         </div>
     </div>
 
-    <!-- ========== مودال إضافة/تعديل مؤلف ========== -->
-    <div id="authorModal" class="modal" style="display:none;">
+    <!-- Author Modal -->
+    <div id="authorModal" class="modal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 id="author-modal-title">إضافة مؤلف جديد</h2>
+            <div class="modal-header">
+                <h3 id="author-modal-title">إضافة مؤلف جديد</h3>
+                <button class="close-modal">&times;</button>
+            </div>
             <form id="author-form">
                 <input type="hidden" id="author-id">
                 <div class="form-group">
@@ -600,11 +521,14 @@
         </div>
     </div>
 
-    <script src="js/config.js?v=20260403"></script>
-    <script src="js/auth.js?v=20260403"></script>
-    <script src="js/api.js?v=20260403"></script>
-    <script src="js/common.js?v=20260403"></script>
-    <script src="js/toast.js?v=20260403"></script>
-    <script src="js/admin-enhanced.js?v=20260403"></script>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script src="js/config.js?v=20260404"></script>
+    <script src="js/auth.js?v=20260404"></script>
+    <script src="js/api.js?v=20260404"></script>
+    <script src="js/common.js?v=20260404"></script>
+    <script src="js/toast.js?v=20260404"></script>
+    <script src="js/admin-new.js?v=20260404"></script>
 </body>
 </html>

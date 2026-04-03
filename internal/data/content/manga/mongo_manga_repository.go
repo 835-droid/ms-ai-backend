@@ -379,7 +379,8 @@ func (r *MongoMangaRepository) ListMostViewed(ctx context.Context, since time.Ti
 		findOptions.SetSkip(skip)
 		findOptions.SetLimit(limit)
 
-		cursor, err := r.coll.Find(ctx2, bson.M{"is_published": true}, findOptions)
+		// Remove is_published filter to show all manga (including unpublished)
+		cursor, err := r.coll.Find(ctx2, bson.M{}, findOptions)
 		if err != nil {
 			return nil, fmt.Errorf("find most viewed (all time): %w", err)
 		}
@@ -434,10 +435,7 @@ func (r *MongoMangaRepository) ListMostViewed(ctx context.Context, since time.Ti
 			"pipeline": mongo.Pipeline{
 				{{Key: "$match", Value: bson.M{
 					"$expr": bson.M{
-						"$and": bson.A{
-							bson.M{"$eq": bson.A{bson.M{"$toString": "$_id"}, "$$mangaIdStr"}},
-							bson.M{"$eq": bson.A{"$is_published", true}},
-						},
+						"$eq": bson.A{bson.M{"$toString": "$_id"}, "$$mangaIdStr"},
 					},
 				}}},
 			},
@@ -505,7 +503,8 @@ func (r *MongoMangaRepository) ListMostViewed(ctx context.Context, since time.Ti
 	ctx2, cancel2 := r.store.WithCollectionTimeout(ctx, "manga", "read")
 	defer cancel2()
 
-	cursor2, err := r.coll.Find(ctx2, bson.M{"_id": bson.M{"$in": ids}, "is_published": true})
+	// Fetch manga details (remove is_published filter to show all manga)
+	cursor2, err := r.coll.Find(ctx2, bson.M{"_id": bson.M{"$in": ids}})
 	if err != nil {
 		return nil, fmt.Errorf("find mangas: %w", err)
 	}
@@ -547,7 +546,8 @@ func (r *MongoMangaRepository) ListRecentlyUpdated(ctx context.Context, skip, li
 	findOptions.SetSkip(skip)
 	findOptions.SetLimit(limit)
 
-	cursor, err := r.coll.Find(ctx, bson.M{"is_published": true}, findOptions)
+	// Remove is_published filter to show all manga (including unpublished)
+	cursor, err := r.coll.Find(ctx, bson.M{}, findOptions)
 	if err != nil {
 		return nil, fmt.Errorf("find recently updated: %w", err)
 	}
@@ -573,7 +573,8 @@ func (r *MongoMangaRepository) ListMostFollowed(ctx context.Context, skip, limit
 	findOptions.SetSkip(skip)
 	findOptions.SetLimit(limit)
 
-	cursor, err := r.coll.Find(ctx, bson.M{"is_published": true}, findOptions)
+	// Remove is_published filter to show all manga (including unpublished)
+	cursor, err := r.coll.Find(ctx, bson.M{}, findOptions)
 	if err != nil {
 		return nil, fmt.Errorf("find most followed: %w", err)
 	}
@@ -595,11 +596,13 @@ func (r *MongoMangaRepository) ListTopRated(ctx context.Context, skip, limit int
 	defer cancel()
 
 	findOptions := options.Find()
-	findOptions.SetSort(bson.M{"average_rating": -1, "rating_count": -1})
+	// Use bson.D for multi-key sort to avoid "multi-key map" error
+	findOptions.SetSort(bson.D{{Key: "average_rating", Value: -1}, {Key: "rating_count", Value: -1}})
 	findOptions.SetSkip(skip)
 	findOptions.SetLimit(limit)
 
-	cursor, err := r.coll.Find(ctx, bson.M{"is_published": true, "rating_count": bson.M{"$gt": 0}}, findOptions)
+	// Remove is_published filter to show all manga with ratings (including unpublished)
+	cursor, err := r.coll.Find(ctx, bson.M{"rating_count": bson.M{"$gt": 0}}, findOptions)
 	if err != nil {
 		return nil, fmt.Errorf("find top rated: %w", err)
 	}

@@ -1,5 +1,23 @@
 /* manga.css: شبكة المانجا وبطاقة المانجا وتفاصيل الفصل */
 .manga-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.75rem; margin-top: 2rem; }
+
+/* Dark Mode Card Styles - Override gray background */
+body.dark-mode .manga-card {
+    background: linear-gradient(145deg, #0f1629, #0a0e1a) !important;
+    border: 1px solid rgba(99, 102, 241, 0.2) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.05) !important;
+}
+
+body.dark-mode .manga-card:hover {
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.2), 0 0 16px rgba(6, 182, 212, 0.1) !important;
+    transform: translateY(-6px);
+}
+
+body.dark-mode .manga-info {
+    background: linear-gradient(180deg, rgba(15, 22, 41, 0.3), rgba(10, 14, 26, 0.6)) !important;
+}
+
 .manga-card { background: var(--bg-primary); border-radius: var(--radius-lg); overflow: hidden; transition: all var(--transition-base); border: 1px solid var(--border-light); cursor: pointer; position: relative; }
 .manga-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-xl); }
 .manga-cover { width: 100%; height: 380px; object-fit: cover; transition: transform var(--transition-slow); }
@@ -195,6 +213,31 @@
     font-weight: 600;
 }
 
+/* ========== تقييم في الأعلى (مثل المكتبة) ========== */
+.manga-rating-top {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.rating-badge {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.15));
+    color: #fbbf24;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+body.dark-mode .rating-badge {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(245, 158, 11, 0.2));
+}
+
 .library-cta {
     text-align: center;
     padding: 3rem 2rem;
@@ -211,4 +254,23 @@
 .library-cta p {
     color: var(--text-secondary);
     margin-bottom: 1.5rem;
+}
+
+/* ========== الحالة الفارغة (Empty State) ========== */
+.empty-state-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    background: var(--bg-tertiary);
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    min-height: 200px;
+}
+
+body.dark-mode .empty-state-card {
+    background: rgba(15, 22, 41, 0.5) !important;
+    border-color: rgba(99, 102, 241, 0.15) !important;
 }

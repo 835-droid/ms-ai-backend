@@ -501,3 +501,152 @@ func (r *MongoMangaChapterRepository) DeleteChapterComment(ctx context.Context, 
 	}
 	return nil
 }
+
+// ========== CHAPTER COMMENT REACTIONS (Like/Dislike) ==========
+
+// AddChapterCommentReaction adds a like/dislike to a chapter comment
+func (r *MongoMangaChapterRepository) AddChapterCommentReaction(ctx context.Context, reaction *coremanga.ChapterCommentReaction) error {
+	if err := r.ensureInitialized(); err != nil {
+		return err
+	}
+
+	reactionColl := r.store.GetCollection("chapter_comment_reactions")
+	ctx, cancel := r.store.WithCollectionTimeout(ctx, "chapter_comment_reactions", "write")
+	defer cancel()
+
+	if reaction.ID.IsZero() {
+		reaction.ID = primitive.NewObjectID()
+	}
+	if reaction.CreatedAt.IsZero() {
+		reaction.CreatedAt = time.Now()
+	}
+
+	// Check if user already reacted
+	existingCtx, existingCancel := r.store.WithCollectionTimeout(ctx, "chapter_comment_reactions", "read")
+	defer existingCancel()
+
+	var existingReaction struct {
+		Type string `bson:"type"`
+	}
+	err := reactionColl.FindOne(existingCtx, bson.M{
+		"comment_id": reaction.CommentID,
+		"user_id":    reaction.UserID,
+	}).Decode(&existingReaction)
+
+	if err == nil {
+		// User already reacted - update if different type
+		if existingReaction.Type != reaction.Type {
+			_, err = reactionColl.UpdateOne(ctx,
+				bson.M{"comment_id": reaction.CommentID, "user_id": reaction.UserID},
+				bson.M{"$set": bson.M{"type": reaction.Type}},
+			)
+			if err != nil {
+				return fmt.Errorf("update comment reaction: %w", err)
+			}
+
+			// Update counts
+			return r.updateCommentReactionCounts(ctx, reaction.CommentID)
+		}
+		return nil // Same reaction, do nothing
+	}
+
+	// Insert new reaction
+	_, err = reactionColl.InsertOne(ctx, reaction)
+	if err != nil {
+		return fmt.Errorf("insert comment reaction: %w", err)
+	}
+
+	// Update comment counts
+	return r.updateCommentReactionCounts(ctx, reaction.CommentID)
+}
+
+// RemoveChapterCommentReaction removes a like/dislike from a chapter comment
+func (r *MongoMangaChapterRepository) RemoveChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) error {
+	if err := r.ensureInitialized(); err != nil {
+		return err
+	}
+
+	reactionColl := r.store.GetCollection("chapter_comment_reactions")
+	ctx, cancel := r.store.WithCollectionTimeout(ctx, "chapter_comment_reactions", "write")
+	defer cancel()
+
+	result, err := reactionColl.DeleteOne(ctx, bson.M{
+		"comment_id": commentID,
+		"user_id":    userID,
+	})
+	if err != nil {
+		return fmt.Errorf("delete comment reaction: %w", err)
+	}
+	if result.DeletedCount == 0 {
+		return nil // Already removed
+	}
+
+	// Update comment counts
+	return r.updateCommentReactionCounts(ctx, commentID)
+}
+
+// GetUserChapterCommentReaction gets user's reaction to a comment
+func (r *MongoMangaChapterRepository) GetUserChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) (string, error) {
+	if err := r.ensureInitialized(); err != nil {
+		return "", err
+	}
+
+	reactionColl := r.store.GetCollection("chapter_comment_reactions")
+	ctx, cancel := r.store.WithCollectionTimeout(ctx, "chapter_comment_reactions", "read")
+	defer cancel()
+
+	var reaction struct {
+		Type string `bson:"type"`
+	}
+	err := reactionColl.FindOne(ctx, bson.M{
+		"comment_id": commentID,
+		"user_id":    userID,
+	}).Decode(&reaction)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return "", nil
+		}
+		return "", fmt.Errorf("get comment reaction: %w", err)
+	}
+
+	return reaction.Type, nil
+}
+
+// updateCommentReactionCounts updates the like/dislike counts for a comment
+func (r *MongoMangaChapterRepository) updateCommentReactionCounts(ctx context.Context, commentID primitive.ObjectID) error {
+	reactionColl := r.store.GetCollection("chapter_comment_reactions")
+	commentColl := r.store.GetCollection("chapter_comments")
+
+	// Count likes
+	likeCount, err := reactionColl.CountDocuments(ctx, bson.M{
+		"comment_id": commentID,
+		"type":       "like",
+	})
+	if err != nil {
+		return fmt.Errorf("count likes: %w", err)
+	}
+
+	// Count dislikes
+	dislikeCount, err := reactionColl.CountDocuments(ctx, bson.M{
+		"comment_id": commentID,
+		"type":       "dislike",
+	})
+	if err != nil {
+		return fmt.Errorf("count dislikes: %w", err)
+	}
+
+	// Update comment
+	_, err = commentColl.UpdateOne(ctx,
+		bson.M{"_id": commentID},
+		bson.M{"$set": bson.M{
+			"like_count":    likeCount,
+			"dislike_count": dislikeCount,
+		}},
+	)
+	if err != nil {
+		return fmt.Errorf("update comment counts: %w", err)
+	}
+
+	return nil
+}

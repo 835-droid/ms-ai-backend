@@ -18,8 +18,14 @@ function renderRecentlyUpdated(mangas) {
     const container = document.getElementById('recently-updated');
     if (!container) return;
 
-    if (!mangas.length) {
-        container.innerHTML = '<p>لا توجد مانجا محدثة</p>';
+    if (!mangas || !Array.isArray(mangas) || mangas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-card">
+                <i class="fas fa-clock fa-3x" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">لا توجد مانجا محدثة حالياً</p>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">سيتم عرض آخر التحديثات هنا عند إضافة فصول جديدة</p>
+            </div>
+        `;
         return;
     }
 
@@ -48,14 +54,21 @@ function renderTrending(rankedMangas) {
     const container = document.getElementById('trending');
     if (!container) return;
 
-    if (!rankedMangas.length) {
-        container.innerHTML = '<p>لا توجد مانجا رواجة</p>';
+    if (!rankedMangas || !Array.isArray(rankedMangas) || rankedMangas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-card" style="grid-column: 1 / -1;">
+                <i class="fas fa-fire fa-3x" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">لا توجد مانجا رواج حالياً</p>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">ستظهر المانجا الأكثر مشاهدة هنا</p>
+            </div>
+        `;
         return;
     }
 
     container.innerHTML = rankedMangas.map((item, index) => {
         const manga = item.manga || item;
         const viewCount = item.view_count || manga.views_count || 0;
+        const averageRating = manga.average_rating || 0;
         const id = manga.id || manga._id;
         const cover = manga.cover_image || 'https://via.placeholder.com/400x560?text=Manga';
 
@@ -64,17 +77,20 @@ function renderTrending(rankedMangas) {
                 <div class="trending-rank">#${index + 1}</div>
                 <a class="manga-card-link" href="manga-details.html?id=${encodeURIComponent(id)}">
                     <img class="manga-cover" src="${escapeHtml(cover)}" alt="${escapeHtml(manga.title)}" onerror="this.src='https://via.placeholder.com/400x560?text=Manga'">
-                    <div class="manga-info">
-                        <h3 class="manga-title">
-                            <i class="fas fa-fire trending-fire"></i>
-                            ${escapeHtml(manga.title)}
-                        </h3>
-                        <p class="manga-description">${escapeHtml(manga.description || '')}</p>
-                        <div class="manga-meta">
-                            <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
-                            <span class="trending-views">👁 ${escapeHtml(formatCompactNumber(viewCount))}</span>
+                        <div class="manga-info">
+                            <h3 class="manga-title">
+                                <i class="fas fa-fire trending-fire"></i>
+                                ${escapeHtml(manga.title)}
+                            </h3>
+                            <div class="manga-rating-top">
+                                <span class="rating-badge">⭐ ${escapeHtml(formatRating(averageRating))}</span>
+                                <span class="trending-views">👁 ${escapeHtml(formatCompactNumber(viewCount))}</span>
+                            </div>
+                            <p class="manga-description">${escapeHtml(manga.description || '')}</p>
+                            <div class="manga-meta">
+                                <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
+                            </div>
                         </div>
-                    </div>
                 </a>
             </article>
         `;
@@ -85,8 +101,14 @@ function renderMostFollowed(mangas) {
     const container = document.getElementById('most-followed');
     if (!container) return;
 
-    if (!mangas.length) {
-        container.innerHTML = '<p>لا توجد مانجا متابعة</p>';
+    if (!mangas || !Array.isArray(mangas) || mangas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-card" style="grid-column: 1 / -1;">
+                <i class="fas fa-heart fa-3x" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">لا توجد مانجا متابعة حالياً</p>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">ستظهر المانجا الأكثر إضافة للمفضلة هنا</p>
+            </div>
+        `;
         return;
     }
 
@@ -101,10 +123,12 @@ function renderMostFollowed(mangas) {
                     <img class="manga-cover" src="${escapeHtml(cover)}" alt="${escapeHtml(manga.title)}" onerror="this.src='https://via.placeholder.com/400x560?text=Manga'">
                     <div class="manga-info">
                         <h3 class="manga-title">${escapeHtml(manga.title)}</h3>
+                        <div class="manga-rating-top">
+                            <span class="favorites-count">❤️ ${escapeHtml(formatCompactNumber(favoritesCount))}</span>
+                        </div>
                         <p class="manga-description">${escapeHtml(manga.description || '')}</p>
                         <div class="manga-meta">
                             <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
-                            <span class="favorites-count">❤️ ${escapeHtml(formatCompactNumber(favoritesCount))}</span>
                         </div>
                     </div>
                 </a>
@@ -117,8 +141,14 @@ function renderTopRated(mangas) {
     const container = document.getElementById('top-rated');
     if (!container) return;
 
-    if (!mangas.length) {
-        container.innerHTML = '<p>لا توجد مانجا مقيمة</p>';
+    if (!mangas || !Array.isArray(mangas) || mangas.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-card" style="grid-column: 1 / -1;">
+                <i class="fas fa-star fa-3x" style="color: var(--text-muted); margin-bottom: 1rem;"></i>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">لا توجد مانجا مقيمة حالياً</p>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">ستظهر المانجا الأعلى تقييماً هنا</p>
+            </div>
+        `;
         return;
     }
 
@@ -134,10 +164,13 @@ function renderTopRated(mangas) {
                     <img class="manga-cover" src="${escapeHtml(cover)}" alt="${escapeHtml(manga.title)}" onerror="this.src='https://via.placeholder.com/400x560?text=Manga'">
                     <div class="manga-info">
                         <h3 class="manga-title">${escapeHtml(manga.title)}</h3>
+                        <div class="manga-rating-top">
+                            <span class="rating-badge">⭐ ${escapeHtml(formatRating(averageRating))}</span>
+                            <span class="rating-count" style="color: var(--text-muted); font-size: 0.75rem;">(${escapeHtml(formatCompactNumber(ratingCount))} تقييم)</span>
+                        </div>
                         <p class="manga-description">${escapeHtml(manga.description || '')}</p>
                         <div class="manga-meta">
                             <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
-                            <span class="rating-score">⭐ ${escapeHtml(formatRating(averageRating))} (${escapeHtml(formatCompactNumber(ratingCount))})</span>
                         </div>
                     </div>
                 </a>
