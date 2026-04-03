@@ -22,36 +22,17 @@ function handleReaderBack() {
     if (mangaId) {
         window.location.href = `${webPagePath('manga-details.html')}?id=${encodeURIComponent(mangaId)}`;
     } else {
-        window.location.href = webPagePath('dashboard.html');
+        window.location.href = webPagePath('library.html');
     }
 }
 
 // تبديل السمة (ليلي/نهاري)
 function initThemeToggle() {
-    const themeBtn = document.getElementById('theme-toggle-btn');
-    if (!themeBtn) return;
-    
-    const savedTheme = localStorage.getItem('readerTheme') || 'dark';
-    applyReaderTheme(savedTheme);
-    
-    themeBtn.addEventListener('click', () => {
-        const container = document.querySelector('.reader-container');
-        const currentTheme = container.classList.contains('bg-white') ? 'dark' : 'light';
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        applyReaderTheme(newTheme);
-        localStorage.setItem('readerTheme', newTheme);
-    });
+    // Removed: theme toggle no longer available
 }
 
 function applyReaderTheme(theme) {
-    const container = document.querySelector('.reader-container');
-    if (!container) return;
-    container.classList.remove('bg-white', 'bg-gray');
-    if (theme === 'light') {
-        container.classList.add('bg-white');
-    } else if (theme === 'gray') {
-        container.classList.add('bg-gray');
-    }
+    // Removed: theme toggle no longer available
 }
 
 // اختصارات لوحة المفاتيح المتقدمة
@@ -63,29 +44,11 @@ function initKeyboardShortcuts() {
         }
         
         switch(e.key) {
-            case 'ArrowLeft':
-                if (!isWebtoonMode()) goPrevPage();
-                break;
-            case 'ArrowRight':
-                if (!isWebtoonMode()) goNextPage();
-                break;
             case 'ArrowUp':
-                if (isWebtoonMode()) {
-                    document.getElementById('reader-main')?.scrollBy({ top: -300, behavior: 'smooth' });
-                }
+                document.getElementById('reader-main')?.scrollBy({ top: -300, behavior: 'smooth' });
                 break;
             case 'ArrowDown':
-                if (isWebtoonMode()) {
-                    document.getElementById('reader-main')?.scrollBy({ top: 300, behavior: 'smooth' });
-                }
-                break;
-            case 'Home':
-                e.preventDefault();
-                goFirstPage();
-                break;
-            case 'End':
-                e.preventDefault();
-                goLastPage();
+                document.getElementById('reader-main')?.scrollBy({ top: 300, behavior: 'smooth' });
                 break;
             case 'f':
             case 'F':
@@ -99,10 +62,6 @@ function initKeyboardShortcuts() {
             case 'P':
                 goToPrevChapter();
                 break;
-            case 't':
-            case 'T':
-                toggleReaderViewMode();
-                break;
             case 'Escape':
                 if (document.fullscreenElement) document.exitFullscreen();
                 break;
@@ -112,21 +71,12 @@ function initKeyboardShortcuts() {
 
 // تسجيل جميع الأحداث
 function bindReaderEvents() {
-    // أزرار التنقل بين الصفحات
-    document.getElementById('prev-page-btn')?.addEventListener('click', goPrevPage);
-    document.getElementById('next-page-btn')?.addEventListener('click', goNextPage);
-    document.getElementById('first-page-btn')?.addEventListener('click', goFirstPage);
-    document.getElementById('last-page-btn')?.addEventListener('click', goLastPage);
-    
     // أزرار التنقل بين الفصول
     document.getElementById('prev-chapter-btn')?.addEventListener('click', goToPrevChapter);
     document.getElementById('next-chapter-btn')?.addEventListener('click', goToNextChapter);
     
     // عناصر التحكم الأخرى
     document.getElementById('chapter-select')?.addEventListener('change', changeChapterFromSelect);
-    document.getElementById('page-selector')?.addEventListener('change', jumpToPage);
-    document.getElementById('back-button')?.addEventListener('click', handleReaderBack);
-    document.getElementById('toggle-view-mode-btn')?.addEventListener('click', toggleReaderViewMode);
     document.getElementById('fullscreen-btn')?.addEventListener('click', toggleFullscreen);
     
     // معالجة أخطاء الصور

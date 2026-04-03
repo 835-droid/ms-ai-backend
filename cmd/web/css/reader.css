@@ -66,7 +66,7 @@
     transition: all 0.2s;
 }
 
-#page-selector, #chapter-select {
+#chapter-select {
     color: #f1f5f9;
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -76,7 +76,7 @@
     cursor: pointer;
 }
 
-#page-selector option, #chapter-select option {
+#chapter-select option {
     background: #1e293b;
     color: #f1f5f9;
 }
@@ -107,25 +107,9 @@
     margin-bottom: 1rem;
 }
 
-/* وضع الصفحات المنفردة */
-.reader-image {
-    max-width: 100%;
-    max-height: 85vh;
-    object-fit: contain;
-    box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5);
-    transition: transform 0.2s ease, opacity 0.3s ease;
-    cursor: pointer;
-    border-radius: 12px;
-    background: #1a1a1a;
-}
-
-.reader-image[hidden] {
-    display: none;
-}
-
 /* وضع الويب توون (تمرير طويل) */
 .reader-webtoon-pages {
-    width: min(100%, 920px);
+    width: min(100%, 1100px);
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -139,7 +123,6 @@
 .reader-webtoon-page {
     width: 100%;
     display: block;
-    border-radius: 12px;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     background: rgba(255, 255, 255, 0.05);
     transition: transform 0.2s;
@@ -170,18 +153,8 @@
     justify-content: center;
     align-items: center;
     gap: 1.5rem;
-    max-width: 600px;
+    max-width: 1100px;
     margin: 0 auto;
-}
-
-.page-counter {
-    font-size: 0.875rem;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 0.5rem 1rem;
-    border-radius: 40px;
-    min-width: 80px;
-    text-align: center;
-    font-weight: 500;
 }
 
 /* أزرار القارئ */
@@ -231,58 +204,10 @@
     background: rgba(0, 0, 0, 0.9);
 }
 
-/* الوضع النهاري (اختياري) */
-.reader-container.bg-white {
-    background: #f8fafc;
-    color: #0f172a;
-}
-
-.reader-container.bg-white .reader-header,
-.reader-container.bg-white .reader-footer {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: rgba(0, 0, 0, 0.1);
-}
-
-.reader-container.bg-white .reader-title h1 {
-    -webkit-text-fill-color: var(--primary);
-}
-
-.reader-container.bg-white #page-selector,
-.reader-container.bg-white #chapter-select {
-    color: #0f172a;
-    background: rgba(255, 255, 255, 0.8);
-    border-color: rgba(0, 0, 0, 0.2);
-}
-
-.reader-container.bg-white #page-selector option,
-.reader-container.bg-white #chapter-select option {
-    background: #ffffff;
-    color: #0f172a;
-}
-
-.reader-container.bg-white .reader-select {
-    background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.2);
-    color: #0f172a;
-}
-
-/* الوضع الرمادي */
-.reader-container.bg-gray {
-    background: #475569;
-}
-
-.reader-container.bg-gray .reader-header,
-.reader-container.bg-gray .reader-footer {
-    background: rgba(0, 0, 0, 0.7);
-}
-
 /* تحسينات للأجهزة اللمسية */
 @media (hover: none) and (pointer: coarse) {
     .btn {
         min-height: 48px;
-    }
-    .reader-image:hover {
-        transform: none;
     }
 }
 
@@ -301,15 +226,8 @@
         flex-wrap: wrap;
         gap: 0.75rem;
     }
-    .reader-image {
-        max-height: 70vh;
-    }
     .reader-webtoon-pages {
         width: 100%;
-    }
-    .page-counter {
-        font-size: 0.75rem;
-        padding: 0.35rem 0.75rem;
     }
 }
 
@@ -322,10 +240,6 @@
     .reader-header,
     .reader-footer {
         display: none !important;
-    }
-    .reader-image {
-        max-width: 100% !important;
-        box-shadow: none !important;
     }
 }
 
@@ -356,7 +270,7 @@
         max-height: 70vh;
     }
     .reader-webtoon-page {
-        border-radius: 8px;
+        border-radius: 0;
     }
 }
 

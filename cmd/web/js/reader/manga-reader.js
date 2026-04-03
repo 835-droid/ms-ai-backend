@@ -60,13 +60,8 @@ async function loadReaderData() {
         // عرض القارئ
         await renderReaderPage();
         
-        // تسجيل المشاهدة
-        if (!readerState.viewTracked) {
-            try {
-                await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/chapters/${encodeURIComponent(chapterId)}/view`, { method: 'POST' });
-                setViewTracked(true);
-            } catch { /* ignore */ }
-        }
+        // تسجيل المشاهدة للفصل الأولي فقط
+        await trackChapterView(chapterId);
         
         updateProgressBar(100);
         setTimeout(() => showProgressBar(false), 500);
@@ -142,10 +137,7 @@ function addWebtoonScrollButtons() {
 
 // مراقبة تغيير وضع العرض لإضافة أزرار التمرير
 function watchViewModeChange() {
-    // إذا كان الوضع ويب توون، أضف الأزرار
-    if (readerState.viewMode === 'webtoon') {
-        addWebtoonScrollButtons();
-    }
+    addWebtoonScrollButtons();
 }
 
 // تهيئة القارئ
@@ -153,7 +145,6 @@ function initReader() {
     loadReaderSettings();
     bindReaderEvents();
     initKeyboardShortcuts();
-    initThemeToggle();
     loadReaderData();
     watchViewModeChange();
 }

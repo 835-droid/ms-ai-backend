@@ -5,9 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
-	"github.com/835-droid/ms-ai-backend/internal/api/middleware"
 	core "github.com/835-droid/ms-ai-backend/internal/core/common"
 	"github.com/835-droid/ms-ai-backend/internal/core/content/manga"
 	"github.com/835-droid/ms-ai-backend/pkg/response"
@@ -52,28 +50,6 @@ func getPaginationParams(c *gin.Context) (page, limit int, skip, lmt int64) {
 	skip = int64((page - 1) * limit)
 	lmt = int64(limit)
 	return
-}
-
-// getCallerInfo extracts the caller ID and roles from the gin context
-func getCallerInfo(c *gin.Context) (primitive.ObjectID, []string, error) {
-	uid, ok := c.Get(middleware.ContextUserIDKey)
-	if !ok {
-		return primitive.NilObjectID, nil, core.ErrUnauthorized
-	}
-	uidStr, _ := uid.(string)
-	callerID, err := primitive.ObjectIDFromHex(uidStr)
-	if err != nil {
-		return primitive.NilObjectID, nil, core.ErrUnauthorized
-	}
-
-	var roles []string
-	if v, ok := c.Get(middleware.ContextUserRolesKey); ok {
-		if r, ok := v.([]string); ok {
-			roles = r
-		}
-	}
-
-	return callerID, roles, nil
 }
 
 const (
@@ -205,6 +181,10 @@ func (h *MangaHandler) GetManga(c *gin.Context) {
 
 	m, err := h.service.GetManga(c.Request.Context(), oid)
 	if err != nil {
+		if errors.Is(err, core.ErrNotFound) || errors.Is(err, core.ErrMangaNotFound) {
+			response.NotFound(c, "manga not found")
+			return
+		}
 		response.InternalError(c, "failed to get manga")
 		return
 	}
@@ -217,153 +197,26 @@ func (h *MangaHandler) GetManga(c *gin.Context) {
 }
 
 // IncrementViews increases the view count for a manga.
-func (h *MangaHandler) IncrementViews(c *gin.Context) {
+// getMangaID extracts and validates manga ID from URL parameters
+func getMangaID(c *gin.Context) (primitive.ObjectID, error) {
 	id := c.Param("mangaID")
 	if id == "" {
-		response.ValidationError(c, "manga id is required")
-		return
+		return primitive.NilObjectID, errors.New("manga id is required")
 	}
 
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		response.ValidationError(c, "invalid manga id")
-		return
+		return primitive.NilObjectID, errors.New("invalid manga id")
 	}
-
-	m, err := h.service.IncrementViews(c.Request.Context(), oid)
-	if err != nil {
-		if errors.Is(err, core.ErrMangaNotFound) || errors.Is(err, core.ErrNotFound) {
-			response.NotFound(c, "manga not found")
-			return
-		}
-		response.InternalError(c, "failed to increment views")
-		return
-	}
-
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"views_count":    m.ViewsCount,
-		"likes_count":    m.LikesCount,
-		"average_rating": m.AverageRating,
-		"rating_count":   m.RatingCount,
-		"manga":          m,
-	})
+	return oid, nil
 }
 
-// SetReaction sets or toggles a reaction for a manga.
-func (h *MangaHandler) SetReaction(c *gin.Context) {
-	id := c.Param("mangaID")
-	if id == "" {
-		response.ValidationError(c, "manga id is required")
-		return
-	}
-
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		response.ValidationError(c, "invalid manga id")
-		return
-	}
-
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		response.Unauthorized(c, "unauthorized")
-		return
-	}
-
-	var req reactionRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, "invalid reaction type")
-		return
-	}
-
-	reactionType := manga.ReactionType(req.Type)
-	m, reaction, err := h.service.SetReaction(c.Request.Context(), oid, userID, reactionType)
-	if err != nil {
-		if errors.Is(err, core.ErrMangaNotFound) || errors.Is(err, core.ErrNotFound) {
-			response.NotFound(c, "manga not found")
-			return
-		}
-		if strings.Contains(err.Error(), "reaction request already in progress") {
-			response.ErrorResp(c, http.StatusTooManyRequests, "reaction request already in progress, please wait")
-			return
-		}
-		response.InternalError(c, "failed to set reaction")
-		return
-	}
-
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"reaction_type":   reaction,
-		"reactions_count": m.ReactionsCount,
-		"likes_count":     m.LikesCount,
-		"views_count":     m.ViewsCount,
-		"average_rating":  m.AverageRating,
-		"manga":           m,
-	})
-}
-
-// GetUserReaction gets the current reaction for a user on a manga.
-func (h *MangaHandler) GetUserReaction(c *gin.Context) {
-	id := c.Param("mangaID")
-	if id == "" {
-		response.ValidationError(c, "manga id is required")
-		return
-	}
-
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		response.ValidationError(c, "invalid manga id")
-		return
-	}
-
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		response.Unauthorized(c, "unauthorized")
-		return
-	}
-
-	reaction, err := h.service.GetUserReaction(c.Request.Context(), oid, userID)
-	if err != nil {
-		response.InternalError(c, "failed to get user reaction")
-		return
-	}
-
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"reaction_type": reaction,
-	})
-}
-
-func (h *MangaHandler) ListLikedMangas(c *gin.Context) {
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		response.Unauthorized(c, "unauthorized")
-		return
-	}
-	page, limit, skip, lmt := getPaginationParams(c)
-	mangas, total, err := h.service.ListLikedMangas(c.Request.Context(), userID, skip, lmt)
-	if err != nil {
-		response.InternalError(c, "failed to list liked mangas")
-		return
-	}
-	totalPages := (total + int64(limit) - 1) / int64(limit)
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"total":        total,
-		"total_pages":  totalPages,
-		"current_page": page,
-		"per_page":     limit,
-		"items":        mangas,
-	})
-}
-
-// RateManga stores a user rating for a manga.
+// RateManga adds a rating to a manga
 func (h *MangaHandler) RateManga(c *gin.Context) {
-	id := c.Param("mangaID")
-	if id == "" {
-		response.ValidationError(c, "manga id is required")
-		return
-	}
-
-	oid, err := primitive.ObjectIDFromHex(id)
+	mangaIDStr := c.Param("mangaID")
+	mangaID, err := primitive.ObjectIDFromHex(mangaIDStr)
 	if err != nil {
-		response.ValidationError(c, "invalid manga id")
+		response.ErrorResp(c, http.StatusBadRequest, "Invalid manga ID")
 		return
 	}
 
@@ -373,35 +226,21 @@ func (h *MangaHandler) RateManga(c *gin.Context) {
 		return
 	}
 
-	var req mangaRatingRequest
+	var req struct {
+		Score float64 `json:"score" binding:"required,min=1,max=10"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, err.Error())
-		return
-	}
-	if req.Score < 1 || req.Score > 5 {
-		response.ValidationError(c, "score must be between 1 and 5")
+		response.ValidationError(c, "Invalid request body")
 		return
 	}
 
-	m, err := h.service.AddRating(c.Request.Context(), oid, userID, req.Score)
+	_, err = h.service.AddRating(c.Request.Context(), mangaID, userID, req.Score)
 	if err != nil {
-		switch {
-		case errors.Is(err, core.ErrMangaNotFound), errors.Is(err, core.ErrNotFound):
-			response.NotFound(c, "manga not found")
-			return
-		default:
-			response.InternalError(c, "failed to rate manga")
-			return
-		}
+		response.InternalError(c, "Failed to rate manga")
+		return
 	}
 
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"average_rating": m.AverageRating,
-		"rating_count":   m.RatingCount,
-		"likes_count":    m.LikesCount,
-		"views_count":    m.ViewsCount,
-		"manga":          m,
-	})
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": "Manga rated successfully"})
 }
 
 // UpdateManga updates an existing manga.
@@ -444,6 +283,10 @@ func (h *MangaHandler) UpdateManga(c *gin.Context) {
 
 	m, err := h.service.GetManga(c.Request.Context(), oid)
 	if err != nil {
+		if errors.Is(err, core.ErrMangaNotFound) || errors.Is(err, core.ErrNotFound) {
+			response.NotFound(c, "manga not found")
+			return
+		}
 		response.InternalError(c, "failed to get manga")
 		return
 	}
@@ -467,7 +310,7 @@ func (h *MangaHandler) UpdateManga(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateManga(c.Request.Context(), m, callerID, roles); err != nil {
-		if err == core.ErrForbidden {
+		if err == core.ErrForbidden || err == core.ErrUnauthorized {
 			response.Forbidden(c, "forbidden")
 			return
 		}
@@ -508,8 +351,12 @@ func (h *MangaHandler) DeleteManga(c *gin.Context) {
 	}
 
 	if err := h.service.DeleteManga(c.Request.Context(), oid, callerID, roles); err != nil {
-		if err == core.ErrForbidden {
+		if err == core.ErrForbidden || err == core.ErrUnauthorized {
 			response.Forbidden(c, "forbidden")
+			return
+		}
+		if errors.Is(err, core.ErrMangaNotFound) || errors.Is(err, core.ErrNotFound) {
+			response.NotFound(c, "manga not found")
 			return
 		}
 		response.InternalError(c, "failed to delete manga")
@@ -519,254 +366,118 @@ func (h *MangaHandler) DeleteManga(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// ========== ENGAGEMENT METHODS ==========
-
-// AddFavorite adds a manga to user's favorites
-func (h *MangaHandler) AddFavorite(c *gin.Context) {
-	mangaID := c.Param("mangaID")
-	if mangaID == "" {
-		response.ValidationError(c, "manga id required")
-		return
+// ListMostViewed lists the most viewed mangas for a given period.
+// @Summary List most viewed mangas
+// @Description Get the most viewed mangas for day/week/month/all time
+// @Tags manga
+// @Accept json
+// @Produce json
+// @Param period query string false "Period: day, week, month, all" default(day)
+// @Param limit query int false "Limit" default(10)
+// @Success 200 {array} manga.RankedManga
+// @Router /api/mangas/most-viewed [get]
+func (h *MangaHandler) ListMostViewed(c *gin.Context) {
+	period := c.DefaultQuery("period", "day")
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
 	}
 
-	oid, err := primitive.ObjectIDFromHex(mangaID)
+	rankedMangas, err := h.service.ListMostViewed(c.Request.Context(), period, 0, int64(limit))
 	if err != nil {
-		response.ValidationError(c, "invalid manga id")
+		response.InternalError(c, "failed to list most viewed mangas")
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		response.Unauthorized(c, "unauthorized")
-		return
-	}
-
-	if err := h.service.AddFavorite(c.Request.Context(), oid, userID); err != nil {
-		response.InternalError(c, "failed to add favorite")
-		return
-	}
-
-	response.SuccessResp(c, http.StatusOK, gin.H{"message": "favorite added"})
+	response.SuccessResp(c, http.StatusOK, rankedMangas)
 }
 
-// RemoveFavorite removes a manga from user's favorites
-func (h *MangaHandler) RemoveFavorite(c *gin.Context) {
-	mangaID := c.Param("mangaID")
-	if mangaID == "" {
-		response.ValidationError(c, "manga id required")
-		return
+// ListRecentlyUpdated lists the recently updated mangas.
+// @Summary List recently updated mangas
+// @Description Get the most recently updated mangas
+// @Tags manga
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit" default(10)
+// @Success 200 {array} manga.Manga
+// @Router /api/mangas/recently-updated [get]
+func (h *MangaHandler) ListRecentlyUpdated(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
 	}
 
-	oid, err := primitive.ObjectIDFromHex(mangaID)
+	mangas, err := h.service.ListRecentlyUpdated(c.Request.Context(), 0, int64(limit))
 	if err != nil {
-		response.ValidationError(c, "invalid manga id")
+		response.InternalError(c, "failed to list recently updated mangas")
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		response.Unauthorized(c, "unauthorized")
-		return
-	}
-
-	if err := h.service.RemoveFavorite(c.Request.Context(), oid, userID); err != nil {
-		response.InternalError(c, "failed to remove favorite")
-		return
-	}
-
-	response.SuccessResp(c, http.StatusOK, gin.H{"message": "favorite removed"})
+	response.SuccessResp(c, http.StatusOK, mangas)
 }
 
-// IsFavorite checks if a manga is favorited by the user
-func (h *MangaHandler) IsFavorite(c *gin.Context) {
-	mangaID := c.Param("mangaID")
-	if mangaID == "" {
-		response.ValidationError(c, "manga id required")
-		return
+// ListMostFollowed lists the most followed mangas.
+// @Summary List most followed mangas
+// @Description Get the most followed mangas ordered by favorites count
+// @Tags manga
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit" default(10)
+// @Success 200 {array} manga.Manga
+// @Router /api/mangas/most-followed [get]
+func (h *MangaHandler) ListMostFollowed(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
 	}
 
-	oid, err := primitive.ObjectIDFromHex(mangaID)
+	mangas, err := h.service.ListMostFollowed(c.Request.Context(), 0, int64(limit))
 	if err != nil {
-		response.ValidationError(c, "invalid manga id")
+		response.InternalError(c, "failed to list most followed mangas")
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		// For anonymous users, return false
-		response.SuccessResp(c, http.StatusOK, gin.H{"is_favorite": false})
-		return
-	}
-
-	isFav, err := h.service.IsFavorite(c.Request.Context(), oid, userID)
-	if err != nil {
-		response.InternalError(c, "failed to check favorite")
-		return
-	}
-
-	response.SuccessResp(c, http.StatusOK, gin.H{"is_favorite": isFav})
+	response.SuccessResp(c, http.StatusOK, mangas)
 }
 
-// ListFavorites retrieves user's favorite mangas
-func (h *MangaHandler) ListFavorites(c *gin.Context) {
-	page := 1
-	limit := 20
-
-	if p := c.Query("page"); p != "" {
-		if v, err := strconv.Atoi(p); err == nil && v > 0 {
-			page = v
-		}
+// ListTopRated lists the top rated mangas.
+// @Summary List top rated mangas
+// @Description Get the top rated mangas ordered by average rating
+// @Tags manga
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit" default(10)
+// @Success 200 {array} manga.Manga
+// @Router /api/mangas/top-rated [get]
+func (h *MangaHandler) ListTopRated(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 10
 	}
-	if l := c.Query("limit"); l != "" {
-		if v, err := strconv.Atoi(l); err == nil && v > 0 && v <= 100 {
-			limit = v
-		}
+	if limit > 50 {
+		limit = 50
 	}
 
-	skip := int64((page - 1) * limit)
-	lmt := int64(limit)
-
-	userID, _, err := getCallerInfo(c)
+	mangas, err := h.service.ListTopRated(c.Request.Context(), 0, int64(limit))
 	if err != nil {
-		response.Unauthorized(c, "unauthorized")
+		response.InternalError(c, "failed to list top rated mangas")
 		return
 	}
 
-	mangas, total, err := h.service.ListFavorites(c.Request.Context(), userID, skip, lmt)
-	if err != nil {
-		response.InternalError(c, "failed to list favorites")
-		return
-	}
-
-	totalPages := (total + int64(limit) - 1) / int64(limit)
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"items":        mangas,
-		"total":        total,
-		"total_pages":  totalPages,
-		"current_page": page,
-		"limit":        limit,
-	})
-}
-
-// AddMangaComment adds a comment to a manga
-func (h *MangaHandler) AddMangaComment(c *gin.Context) {
-	mangaID := c.Param("mangaID")
-	if mangaID == "" {
-		response.ValidationError(c, "manga id required")
-		return
-	}
-
-	var req struct {
-		Content string `json:"content" binding:"required,min=1,max=1000"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.ValidationError(c, "invalid request body")
-		return
-	}
-
-	oid, err := primitive.ObjectIDFromHex(mangaID)
-	if err != nil {
-		response.ValidationError(c, "invalid manga id")
-		return
-	}
-
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		response.Unauthorized(c, "unauthorized")
-		return
-	}
-
-	username, _ := c.Get("username")
-	usernameStr, _ := username.(string)
-
-	comment := &manga.MangaComment{
-		MangaID:  oid,
-		UserID:   userID,
-		Username: usernameStr,
-		Content:  req.Content,
-	}
-
-	if err := h.service.AddMangaComment(c.Request.Context(), comment); err != nil {
-		response.InternalError(c, "failed to add comment")
-		return
-	}
-
-	response.SuccessResp(c, http.StatusCreated, comment)
-}
-
-// ListMangaComments retrieves comments for a manga
-func (h *MangaHandler) ListMangaComments(c *gin.Context) {
-	mangaID := c.Param("mangaID")
-	if mangaID == "" {
-		response.ValidationError(c, "manga id required")
-		return
-	}
-
-	oid, err := primitive.ObjectIDFromHex(mangaID)
-	if err != nil {
-		response.ValidationError(c, "invalid manga id")
-		return
-	}
-
-	page := 1
-	limit := 20
-
-	if p := c.Query("page"); p != "" {
-		if v, err := strconv.Atoi(p); err == nil && v > 0 {
-			page = v
-		}
-	}
-	if l := c.Query("limit"); l != "" {
-		if v, err := strconv.Atoi(l); err == nil && v > 0 && v <= 100 {
-			limit = v
-		}
-	}
-
-	skip := int64((page - 1) * limit)
-	lmt := int64(limit)
-
-	comments, total, err := h.service.ListMangaComments(c.Request.Context(), oid, skip, lmt)
-	if err != nil {
-		response.InternalError(c, "failed to list comments")
-		return
-	}
-
-	totalPages := (total + int64(limit) - 1) / int64(limit)
-	response.SuccessResp(c, http.StatusOK, gin.H{
-		"data":         comments,
-		"total":        total,
-		"total_pages":  totalPages,
-		"current_page": page,
-		"limit":        limit,
-	})
-}
-
-// DeleteMangaComment deletes a manga comment
-func (h *MangaHandler) DeleteMangaComment(c *gin.Context) {
-	commentID := c.Param("comment_id")
-	if commentID == "" {
-		response.ValidationError(c, "comment id required")
-		return
-	}
-
-	oid, err := primitive.ObjectIDFromHex(commentID)
-	if err != nil {
-		response.ValidationError(c, "invalid comment id")
-		return
-	}
-
-	userID, _, err := getCallerInfo(c)
-	if err != nil {
-		response.Unauthorized(c, "unauthorized")
-		return
-	}
-
-	if err := h.service.DeleteMangaComment(c.Request.Context(), oid, userID); err != nil {
-		response.InternalError(c, "failed to delete comment")
-		return
-	}
-
-	c.Status(http.StatusNoContent)
+	response.SuccessResp(c, http.StatusOK, mangas)
 }
 
 // ----- END OF FILE: backend/MS-AI/internal/api/handler/content/manga/manga_handler.go -----

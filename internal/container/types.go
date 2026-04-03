@@ -8,17 +8,19 @@ import (
 	coreauth "github.com/835-droid/ms-ai-backend/internal/core/auth"
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
 	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
-	"github.com/835-droid/ms-ai-backend/internal/data/mongo"
+	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
+	"github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 	"github.com/835-droid/ms-ai-backend/pkg/config"
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 )
 
 type Container struct {
-	Config   *config.Config
-	Logger   *logger.Logger
-	MongoDB  *mongo.MongoStore
-	UserRepo coreuser.Repository
-	Handlers *handler.Container
+	Config     *config.Config
+	Logger     *logger.Logger
+	MongoDB    *mongoinfra.MongoStore
+	PostgresDB *postgres.PostgresStore
+	UserRepo   coreuser.Repository
+	Handlers   *handler.Container
 }
 
 type RepoBundle struct {

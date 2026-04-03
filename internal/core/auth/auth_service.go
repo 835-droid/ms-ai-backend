@@ -118,10 +118,14 @@ func (s *DefaultAuthService) SignUp(ctx context.Context, username, password, inv
 		},
 	}
 	newDetails := &coreuser.UserDetails{
-		UUID:     utils.GenerateUUID(),
-		UserID:   publicUserID,
-		Status:   "active",
-		UserBase: newUser.UserBase,
+		UUID:                  utils.GenerateUUID(),
+		UserID:                publicUserID,
+		Status:                "active",
+		LastLoginAt:           nil,
+		RefreshToken:          "",
+		RefreshTokenExpiresAt: nil,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}
 
 	// استخدام العملية الذرية لإنشاء المستخدم واستهلاك الرمز

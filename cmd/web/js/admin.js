@@ -386,6 +386,7 @@ async function handleCreateChapter(event) {
         });
         showMessage('success', 'تمت إضافة الفصل', 'admin-message');
         event.target.reset();
+        currentAdminMangaId = mangaId;
         await loadAdminChapterList(mangaId);
     } catch (error) {
         let errorMsg = error.message;

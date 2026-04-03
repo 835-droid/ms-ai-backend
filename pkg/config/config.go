@@ -4,6 +4,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -36,8 +37,11 @@ type Config struct {
 	MongoEnableMonitoring   bool
 	MongoSlowQueryThreshold time.Duration
 
-	PostgresDSN string
-	DBType      string
+	PostgresDSN              string
+	PostgresEnableMonitoring bool
+	DBType                   string
+	DBFailoverEnabled        bool
+	DBMongoAuthOverride      bool
 }
 
 func LoadConfig() (*Config, error) {
@@ -64,6 +68,15 @@ func LoadConfig() (*Config, error) {
 
 	cfg.DBType = strings.ToLower(getenv("DB_TYPE", "postgres"))
 	cfg.PostgresDSN = getenv("POSTGRES_DSN", "")
+	if v := getenv("POSTGRES_ENABLE_MONITORING", "true"); strings.ToLower(v) == "true" {
+		cfg.PostgresEnableMonitoring = true
+	}
+	if v := getenv("DB_FAILOVER_ENABLED", "false"); strings.ToLower(v) == "true" {
+		cfg.DBFailoverEnabled = true
+	}
+	if v := getenv("DB_MONGO_AUTH_OVERRIDE", "false"); strings.ToLower(v) == "true" {
+		cfg.DBMongoAuthOverride = true
+	}
 
 	// MongoDB config only needed if DBType is mongo or hybrid
 	if cfg.DBType == "mongo" || cfg.DBType == "hybrid" {
@@ -154,8 +167,16 @@ func (c *Config) Validate() error {
 			return errors.New("MONGO_URI is required when DB_TYPE is mongo or hybrid")
 		}
 		if strings.ToLower(c.Environment) == "production" {
-			if strings.TrimSpace(c.MongoUsername) == "" || strings.TrimSpace(c.MongoPassword) == "" {
-				return errors.New("MONGO_USERNAME and MONGO_PASSWORD are required in production")
+			hasEnvCreds := strings.TrimSpace(c.MongoUsername) != "" && strings.TrimSpace(c.MongoPassword) != ""
+			hasURICreds := mongoURIHasCredentials(c.MongoURI)
+			if !hasEnvCreds && !hasURICreds {
+				return errors.New("MONGO_USERNAME and MONGO_PASSWORD are required in production unless MONGO_URI contains credentials")
+			}
+			if hasEnvCreds && hasURICreds {
+				uriUser, uriPass, _ := getMongoURICredentials(c.MongoURI)
+				if uriUser != c.MongoUsername || uriPass != c.MongoPassword {
+					return errors.New("MONGO_URI credentials conflict with MONGO_USERNAME/MONGO_PASSWORD; use only one credential source")
+				}
 			}
 		}
 	case "postgres":
@@ -176,6 +197,38 @@ func (c *Config) Validate() error {
 		return errors.New("CORS_ORIGINS must not be '*' in production; provide an allowlist")
 	}
 	return nil
+}
+
+func mongoURIHasCredentials(uri string) bool {
+	if strings.TrimSpace(uri) == "" {
+		return false
+	}
+	parsed, err := url.Parse(uri)
+	if err != nil || parsed.User == nil {
+		return false
+	}
+	username := strings.TrimSpace(parsed.User.Username())
+	password, hasPassword := parsed.User.Password()
+	if username == "" || !hasPassword || strings.TrimSpace(password) == "" {
+		return false
+	}
+	return true
+}
+
+func getMongoURICredentials(uri string) (username, password string, ok bool) {
+	if strings.TrimSpace(uri) == "" {
+		return "", "", false
+	}
+	parsed, err := url.Parse(uri)
+	if err != nil || parsed.User == nil {
+		return "", "", false
+	}
+	username = strings.TrimSpace(parsed.User.Username())
+	password, hasPassword := parsed.User.Password()
+	if username == "" || !hasPassword || strings.TrimSpace(password) == "" {
+		return "", "", false
+	}
+	return username, password, true
 }
 
 func getenv(key, def string) string {

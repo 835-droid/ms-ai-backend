@@ -218,6 +218,12 @@ auto-save-list
 *.el
 
 # Org-mode
+
+# Legacy artifact files created during refactor runs
+erver
+"of -i :8080"
+ms-ai-backend/
+gen_invite
 .org-id-locations
 *_archive
 

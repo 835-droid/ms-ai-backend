@@ -14,10 +14,10 @@
 </head>
 <body>
     <nav class="navbar">
-        <a href="control.html" class="navbar-brand"><i class="fas fa-book"></i> MS-AI</a>
+        <a href="dashboard.html" class="navbar-brand"><i class="fas fa-home"></i> MS-AI</a>
         <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
-        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> المكتبة</a></li><li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li></ul>
-        <div class="navbar-right"><button class="dark-mode-toggle"></button><div class="navbar-user-badge"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></div></div>
+        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li><li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li><li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li></ul>
+        <div class="navbar-right"><button class="dark-mode-toggle"></button><button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button><div class="navbar-user-badge"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></div></div>
     </nav>
 
     <main class="page-shell">
@@ -27,11 +27,10 @@
                     <h1 id="welcome-box">مرحباً بك</h1>
                     <p>اختر ما تريد فعله اليوم</p>
                 </div>
-                <button id="logout-button" class="btn btn-danger">تسجيل الخروج</button>
             </div>
 
             <div class="quick-links">
-                <a href="dashboard.html" class="feature-link">
+                <a href="library.html" class="feature-link">
                     <i class="fas fa-book-open"></i>
                     <div>
                         <strong>تصفح المانجا</strong>

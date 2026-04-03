@@ -25,10 +25,11 @@ type Repository interface {
 	UseCode(ctx context.Context, codeID primitive.ObjectID, userID primitive.ObjectID) error
 	CreateInvite(ctx context.Context, invite *InviteCode) error
 	FindAllInvites(ctx context.Context, page, limit int) ([]*InviteCode, error)
+	FindAllInvitesWithTotal(ctx context.Context, skip, limit int64) ([]*InviteCode, int64, error)
 	DeleteInvite(ctx context.Context, codeID primitive.ObjectID) error
 
 	FindAllUsers(ctx context.Context, skip, limit int64) ([]*User, int64, error)
-	UpdateUserRole(ctx context.Context, userID primitive.ObjectID, role string, add bool) error
+	UpdateUserRole(ctx context.Context, userID primitive.ObjectID, role Role, add bool) error
 }
 
 // ----- END OF FILE: backend/MS-AI/internal/core/user/repository.go -----

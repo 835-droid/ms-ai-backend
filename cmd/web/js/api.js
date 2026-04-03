@@ -101,7 +101,10 @@ async function apiFetch(path, options = {}, meta = {}) {
     if (!response.ok) {
         const message = data?.error || data?.message || 'Request failed';
         console.error('apiFetch error', response.status, message);
-        throw new Error(message);
+        const error = new Error(message);
+        error.status = response.status;
+        error.responseBody = data;
+        throw error;
     }
 
     return data?.data !== undefined ? data.data : data;

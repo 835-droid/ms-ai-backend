@@ -61,7 +61,6 @@ function saveReaderSettings() {
 // تحميل إعدادات القارئ
 function loadReaderSettings() {
     const settings = JSON.parse(localStorage.getItem('readerSettings') || '{}');
-    if (settings.viewMode) readerState.viewMode = settings.viewMode;
     if (typeof settings.prefetchEnabled === 'boolean') readerState.prefetchEnabled = settings.prefetchEnabled;
     if (typeof settings.autoNextChapter === 'boolean') readerState.autoNextChapter = settings.autoNextChapter;
 }

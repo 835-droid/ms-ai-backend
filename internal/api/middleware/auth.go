@@ -18,6 +18,7 @@ import (
 const (
 	ContextUserIDKey    = "user_id"
 	ContextUserRolesKey = "user_roles"
+	ContextUsernameKey  = "username"
 )
 
 // AuthMiddleware verifies JWT and optionally checks user activity.
@@ -62,6 +63,55 @@ func AuthMiddleware(cfg *config.Config, userRepo user.Repository) gin.HandlerFun
 				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "user inactive or not found"})
 				return
 			}
+			c.Set(ContextUsernameKey, u.Username)
+		}
+		c.Next()
+	}
+}
+
+// OptionalAuthMiddleware sets user context if JWT is present and valid, but doesn't require it.
+func OptionalAuthMiddleware(cfg *config.Config, userRepo user.Repository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		h := c.GetHeader("Authorization")
+		if h == "" {
+			c.Next()
+			return
+		}
+		parts := strings.SplitN(h, " ", 2)
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			c.Next()
+			return
+		}
+		tokenStr := parts[1]
+
+		claims, err := tokenpkg.ValidateToken(tokenStr, cfg.JWTSecret)
+		if err != nil {
+			c.Next()
+			return
+		}
+
+		if claims.UserID == "" {
+			c.Next()
+			return
+		}
+		c.Set(ContextUserIDKey, claims.UserID)
+		c.Set(ContextUserRolesKey, claims.Roles)
+
+		// Check if user is still active (only if userRepo provided)
+		if userRepo != nil {
+			ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+			defer cancel()
+			objID, err := primitive.ObjectIDFromHex(claims.UserID)
+			if err != nil {
+				c.Next()
+				return
+			}
+			u, err := userRepo.FindByID(ctx, objID)
+			if err != nil || u == nil || !u.IsActive {
+				c.Next()
+				return
+			}
+			c.Set(ContextUsernameKey, u.Username)
 		}
 		c.Next()
 	}

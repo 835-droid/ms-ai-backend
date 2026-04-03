@@ -25,7 +25,7 @@ async function handleLoginSubmit(event) {
         showMessage('success', 'تم تسجيل الدخول بنجاح', 'auth-message');
 
         setTimeout(() => {
-            window.location.href = webPagePath('control.html');
+            window.location.href = webPagePath('dashboard.html');
         }, 700);
     } catch (error) {
         showMessage('error', error.message, 'auth-message');
@@ -69,7 +69,7 @@ async function handleSignupSubmit(event) {
         showMessage('success', 'تم إنشاء الحساب بنجاح', 'auth-message');
 
         setTimeout(() => {
-            window.location.href = webPagePath('control.html');
+            window.location.href = webPagePath('dashboard.html');
         }, 700);
     } catch (error) {
         showMessage('error', error.message, 'auth-message');
@@ -108,6 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tab-signup')?.addEventListener('click', () => switchAuthTab('signup'));
 
     if (hasAuthToken()) {
-        window.location.href = webPagePath('control.html');
+        window.location.href = webPagePath('dashboard.html');
     }
 });

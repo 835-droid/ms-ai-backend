@@ -144,7 +144,14 @@ async function ensureAdmin() {
         return true;
     } catch (err) {
         console.error('ensureAdmin: server check failed', err);
-        return false;
+        // Distinguish between 403 (not admin) and other errors (network/500)
+        if (err.status === 403) {
+            // User is not admin
+            return false;
+        } else {
+            // Network or server error - throw error instead of returning false
+            throw new Error('admin_check_network_error');
+        }
     }
 }
 

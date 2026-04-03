@@ -20,7 +20,7 @@
 }
 
 body.dark-mode .navbar {
-    background: rgba(30, 41, 59, 0.95);
+    background: rgba(10, 10, 10, 0.95);
     border-bottom-color: var(--border-light);
 }
 

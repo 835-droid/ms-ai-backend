@@ -59,11 +59,12 @@ func main() {
 			},
 		}
 		adminDetails := &coreuser.UserDetails{
-			UserBase: coreuser.UserBase{
-				Roles:    coreuser.Roles{coreuser.RoleAdmin},
-				IsActive: true,
-			},
-			Status: "active",
+			Status:                "active",
+			LastLoginAt:           nil,
+			RefreshToken:          "",
+			RefreshTokenExpiresAt: nil,
+			CreatedAt:             time.Now(),
+			UpdatedAt:             time.Now(),
 		}
 		if err := repos.User.Create(ctx, adminUser, adminDetails); err != nil {
 			fmt.Printf("failed to create admin user: %v\n", err)

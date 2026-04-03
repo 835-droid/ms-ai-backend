@@ -66,8 +66,6 @@ func (h *Handler) SignUp(c *gin.Context) {
 		}
 	}
 
-	// ... (باقي الكود كما
-
 	response.SuccessResp(c, http.StatusCreated, gin.H{
 		"message":       i18n.TContext(c, i18n.MsgAuthSignupSuccess),
 		"access_token":  res.AccessToken,

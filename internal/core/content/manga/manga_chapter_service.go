@@ -21,10 +21,14 @@ type MangaChapterService interface {
 	DeleteMangaChapter(ctx context.Context, id primitive.ObjectID, callerID primitive.ObjectID, roles []string) error
 	// Engagement methods
 	IncrementChapterViews(ctx context.Context, chapterID, mangaID primitive.ObjectID) error
-	AddChapterRating(ctx context.Context, rating *ChapterRating) (float64, error)
+	TrackChapterView(ctx context.Context, chapterID, mangaID, userID primitive.ObjectID) error
+	HasUserViewedChapter(ctx context.Context, chapterID, userID primitive.ObjectID) (bool, error)
+	TrackAndIncrementChapterView(ctx context.Context, chapterID, mangaID, userID primitive.ObjectID) (bool, error)
+	AddChapterRating(ctx context.Context, rating *ChapterRating) (float64, int64, float64, error)
 	HasUserRatedChapter(ctx context.Context, chapterID, userID primitive.ObjectID) (bool, error)
+	GetUserChapterRating(ctx context.Context, chapterID, userID primitive.ObjectID) (float64, bool, error)
 	AddChapterComment(ctx context.Context, comment *ChapterComment) error
-	ListChapterComments(ctx context.Context, chapterID primitive.ObjectID, skip, limit int64) ([]*ChapterComment, int64, error)
+	ListChapterComments(ctx context.Context, chapterID primitive.ObjectID, skip, limit int64, sortOrder string) ([]*ChapterComment, int64, error)
 	DeleteChapterComment(ctx context.Context, commentID, userID primitive.ObjectID) error
 }
 
@@ -88,6 +92,16 @@ func (s *DefaultMangaChapterService) CreateMangaChapter(ctx context.Context, cha
 		return nil, err
 	}
 
+	// Update parent manga's updated_at timestamp
+	manga.UpdatedAt = now
+	if err := s.mangaRepo.UpdateManga(ctx, manga); err != nil {
+		s.log.Error("update manga timestamp failed", map[string]interface{}{
+			"error":    err.Error(),
+			"manga_id": manga.ID.Hex(),
+		})
+		// Don't fail the operation, just log the error
+	}
+
 	s.log.Info("manga chapter created", map[string]interface{}{
 		"id":        chapter.ID.Hex(),
 		"manga_id":  chapter.MangaID.Hex(),
@@ -111,6 +125,13 @@ func (s *DefaultMangaChapterService) GetMangaChapter(ctx context.Context, id pri
 			"id":    id.Hex(),
 		})
 		return nil, err
+	}
+
+	if chapter == nil {
+		s.log.Error("chapter not found", map[string]interface{}{
+			"id": id.Hex(),
+		})
+		return nil, core.ErrMangaChapterNotFound
 	}
 
 	s.log.Debug("manga chapter retrieved", map[string]interface{}{
@@ -179,7 +200,8 @@ func (s *DefaultMangaChapterService) UpdateMangaChapter(ctx context.Context, cha
 		return err
 	}
 
-	chapter.UpdatedAt = time.Now()
+	now := time.Now()
+	chapter.UpdatedAt = now
 
 	if err := s.chapterRepo.UpdateMangaChapter(ctx, chapter); err != nil {
 		s.log.Error("chapter update failed", map[string]interface{}{
@@ -187,6 +209,16 @@ func (s *DefaultMangaChapterService) UpdateMangaChapter(ctx context.Context, cha
 			"id":    chapter.ID.Hex(),
 		})
 		return err
+	}
+
+	// Update parent manga's updated_at timestamp
+	manga.UpdatedAt = now
+	if err := s.mangaRepo.UpdateManga(ctx, manga); err != nil {
+		s.log.Error("update manga timestamp failed", map[string]interface{}{
+			"error":    err.Error(),
+			"manga_id": manga.ID.Hex(),
+		})
+		// Don't fail the operation, just log the error
 	}
 
 	s.log.Info("manga chapter updated", map[string]interface{}{
@@ -245,6 +277,16 @@ func (s *DefaultMangaChapterService) DeleteMangaChapter(ctx context.Context, id 
 		return err
 	}
 
+	// Update parent manga's updated_at timestamp
+	manga.UpdatedAt = time.Now()
+	if err := s.mangaRepo.UpdateManga(ctx, manga); err != nil {
+		s.log.Error("update manga timestamp failed", map[string]interface{}{
+			"error":    err.Error(),
+			"manga_id": manga.ID.Hex(),
+		})
+		// Don't fail the operation, just log the error
+	}
+
 	s.log.Info("manga chapter deleted", map[string]interface{}{
 		"id":        id.Hex(),
 		"manga_id":  chapter.MangaID.Hex(),
@@ -278,8 +320,45 @@ func (s *DefaultMangaChapterService) IncrementChapterViews(ctx context.Context, 
 	return nil
 }
 
+// TrackChapterView records that a user watched a chapter.
+func (s *DefaultMangaChapterService) TrackChapterView(ctx context.Context, chapterID, mangaID, userID primitive.ObjectID) error {
+	s.log.Debug("tracking user chapter view", map[string]interface{}{
+		"chapter_id": chapterID.Hex(),
+		"manga_id":   mangaID.Hex(),
+		"user_id":    userID.Hex(),
+	})
+
+	if err := s.chapterRepo.TrackChapterView(ctx, chapterID, mangaID, userID); err != nil {
+		s.log.Error("track chapter view failed", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return err
+	}
+
+	return nil
+}
+
+// HasUserViewedChapter checks whether a user has viewed a chapter.
+func (s *DefaultMangaChapterService) HasUserViewedChapter(ctx context.Context, chapterID, userID primitive.ObjectID) (bool, error) {
+	s.log.Debug("check if user viewed chapter", map[string]interface{}{
+		"chapter_id": chapterID.Hex(),
+		"user_id":    userID.Hex(),
+	})
+	return s.chapterRepo.HasUserViewedChapter(ctx, chapterID, userID)
+}
+
+// TrackAndIncrementChapterView atomically tracks a chapter view and increments counters if it's the user's first view.
+func (s *DefaultMangaChapterService) TrackAndIncrementChapterView(ctx context.Context, chapterID, mangaID, userID primitive.ObjectID) (bool, error) {
+	s.log.Debug("track and increment chapter view", map[string]interface{}{
+		"chapter_id": chapterID.Hex(),
+		"manga_id":   mangaID.Hex(),
+		"user_id":    userID.Hex(),
+	})
+	return s.chapterRepo.TrackAndIncrementChapterView(ctx, chapterID, mangaID, userID)
+}
+
 // AddChapterRating adds a rating to a chapter.
-func (s *DefaultMangaChapterService) AddChapterRating(ctx context.Context, rating *ChapterRating) (float64, error) {
+func (s *DefaultMangaChapterService) AddChapterRating(ctx context.Context, rating *ChapterRating) (float64, int64, float64, error) {
 	s.log.Debug("adding chapter rating", map[string]interface{}{
 		"chapter_id": rating.ChapterID.Hex(),
 		"user_id":    rating.UserID.Hex(),
@@ -290,29 +369,47 @@ func (s *DefaultMangaChapterService) AddChapterRating(ctx context.Context, ratin
 		s.log.Error("chapter rating validation failed", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return 0, err
+		return 0, 0, 0, err
 	}
 
-	avgRating, err := s.chapterRepo.AddChapterRating(ctx, rating)
+	viewed, err := s.chapterRepo.HasUserViewedChapter(ctx, rating.ChapterID, rating.UserID)
+	if err != nil {
+		s.log.Error("check chapter view failed", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return 0, 0, 0, err
+	}
+	if !viewed {
+		return 0, 0, 0, core.ErrForbidden
+	}
+
+	avgRating, count, userScore, err := s.chapterRepo.AddChapterRating(ctx, rating)
 	if err != nil {
 		s.log.Error("add chapter rating failed", map[string]interface{}{
 			"error":      err.Error(),
 			"chapter_id": rating.ChapterID.Hex(),
 		})
-		return 0, err
+		return 0, 0, 0, err
 	}
 
 	s.log.Info("chapter rating added", map[string]interface{}{
-		"chapter_id": rating.ChapterID.Hex(),
-		"user_id":    rating.UserID.Hex(),
-		"avg_rating": avgRating,
+		"chapter_id":   rating.ChapterID.Hex(),
+		"user_id":      rating.UserID.Hex(),
+		"avg_rating":   avgRating,
+		"rating_count": count,
+		"user_score":   userScore,
 	})
-	return avgRating, nil
+	return avgRating, count, userScore, nil
 }
 
 // HasUserRatedChapter checks if user has rated a chapter.
 func (s *DefaultMangaChapterService) HasUserRatedChapter(ctx context.Context, chapterID, userID primitive.ObjectID) (bool, error) {
 	return s.chapterRepo.HasUserRatedChapter(ctx, chapterID, userID)
+}
+
+// GetUserChapterRating retrieves the user's rating for a specific chapter.
+func (s *DefaultMangaChapterService) GetUserChapterRating(ctx context.Context, chapterID, userID primitive.ObjectID) (float64, bool, error) {
+	return s.chapterRepo.GetUserChapterRating(ctx, chapterID, userID)
 }
 
 // AddChapterComment adds a comment to a chapter.
@@ -346,14 +443,15 @@ func (s *DefaultMangaChapterService) AddChapterComment(ctx context.Context, comm
 }
 
 // ListChapterComments retrieves comments for a chapter.
-func (s *DefaultMangaChapterService) ListChapterComments(ctx context.Context, chapterID primitive.ObjectID, skip, limit int64) ([]*ChapterComment, int64, error) {
+func (s *DefaultMangaChapterService) ListChapterComments(ctx context.Context, chapterID primitive.ObjectID, skip, limit int64, sortOrder string) ([]*ChapterComment, int64, error) {
 	s.log.Debug("listing chapter comments", map[string]interface{}{
 		"chapter_id": chapterID.Hex(),
 		"skip":       skip,
 		"limit":      limit,
+		"sortOrder":  sortOrder,
 	})
 
-	comments, total, err := s.chapterRepo.ListChapterComments(ctx, chapterID, skip, limit)
+	comments, total, err := s.chapterRepo.ListChapterComments(ctx, chapterID, skip, limit, sortOrder)
 	if err != nil {
 		s.log.Error("list chapter comments failed", map[string]interface{}{
 			"error":      err.Error(),

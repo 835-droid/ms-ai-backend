@@ -1,4 +1,4 @@
-package main1
+package main
 
 import (
 	"context"
@@ -97,13 +97,14 @@ func main() {
 
 	// 10. بناء adminDetails
 	adminDetails := &coreuser.UserDetails{
-		UUID:   userUUID,
-		UserID: userID,
-		UserBase: coreuser.UserBase{
-			Roles:    coreuser.Roles{coreuser.RoleAdmin},
-			IsActive: true,
-		},
-		Status: "active",
+		UUID:                  userUUID,
+		UserID:                userID,
+		Status:                "active",
+		LastLoginAt:           nil,
+		RefreshToken:          "",
+		RefreshTokenExpiresAt: nil,
+		CreatedAt:             time.Now(),
+		UpdatedAt:             time.Now(),
 	}
 
 	// 11. إنشاء المستخدم
@@ -139,10 +140,15 @@ func main() {
 	// Invite code creation is currently disabled in this setup.
 	fmt.Println("[⚠] Invite code generation is skipped (use admin dashboard or API to create invite codes).")
 
-	// 14. إغلاق اتصال MongoDB
+	// 14. إغلاق اتصالات قواعد البيانات
 	if mongoStore != nil {
 		if err := mongoStore.Close(ctx); err != nil {
 			fmt.Printf("⚠️  Warning: Failed to close MongoDB connection: %v\n", err)
+		}
+	}
+	if postgresStore != nil {
+		if err := postgresStore.Close(); err != nil {
+			fmt.Printf("⚠️  Warning: Failed to close PostgreSQL connection: %v\n", err)
 		}
 	}
 

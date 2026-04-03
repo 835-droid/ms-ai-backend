@@ -12,7 +12,8 @@ let readerState = {
     chapter: null,
     pageIndex: 0,
     viewTracked: false,
-    viewMode: localStorage.getItem(READER_VIEW_MODE_KEY) === 'webtoon' ? 'webtoon' : 'paged',
+    viewedChapters: new Set(), // Track viewed chapters by ID
+    viewMode: 'webtoon',
     autoNextChapter: true,
     isFullscreen: false,
     prefetchEnabled: localStorage.getItem(READER_PREFETCH_KEY) !== 'false',
@@ -84,12 +85,50 @@ function setManga(manga) {
 }
 
 function setViewMode(mode) {
-    readerState.viewMode = mode;
-    localStorage.setItem(READER_VIEW_MODE_KEY, mode);
+    // Force webtoon-only mode
+    readerState.viewMode = 'webtoon';
 }
 
 function setViewTracked(tracked) {
     readerState.viewTracked = tracked;
+}
+
+function hasChapterBeenViewed(chapterId) {
+    return readerState.viewedChapters.has(chapterId);
+}
+
+function markChapterAsViewed(chapterId) {
+    readerState.viewedChapters.add(chapterId);
+}
+
+// تسجيل مشاهدة فصل
+async function trackChapterView(chapterId) {
+    if (!chapterId || hasChapterBeenViewed(chapterId)) {
+        return; // Already viewed this chapter
+    }
+    
+    try {
+        const result = await apiFetch(`/mangas/${encodeURIComponent(readerState.mangaId)}/chapters/${encodeURIComponent(chapterId)}/view`, { method: 'POST' }, { noRedirect: true });
+        readerState.trackingSuccess = result.tracking_success !== false; // Default to true if not specified
+        window.lastTrackingSuccess = readerState.trackingSuccess;
+        markChapterAsViewed(chapterId);
+    } catch (error) {
+        if (error.message && error.message.includes('Authentication required')) {
+            // Try to refresh session and retry
+            try {
+                await refreshSession();
+                const result = await apiFetch(`/mangas/${encodeURIComponent(readerState.mangaId)}/chapters/${encodeURIComponent(chapterId)}/view`, { method: 'POST' });
+                readerState.trackingSuccess = result.tracking_success !== false;
+                window.lastTrackingSuccess = readerState.trackingSuccess;
+                markChapterAsViewed(chapterId);
+            } catch (retryError) {
+                console.warn('Failed to track chapter view after session refresh:', retryError);
+                showToast('فشل في تسجيل المشاهدة. قد لا تتمكن من التقييم.', 'warning');
+            }
+        } else {
+            console.warn('Failed to track chapter view:', error);
+        }
+    }
 }
 
 function setLoading(loading) {

@@ -19,26 +19,6 @@
             gap: 0.75rem;
             flex-wrap: wrap;
         }
-        .page-selector-wrapper {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(255,255,255,0.1);
-            padding: 0.25rem 0.75rem;
-            border-radius: 40px;
-        }
-        .page-selector-wrapper label {
-            margin: 0;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-        #page-selector {
-            width: auto;
-            min-width: 70px;
-            padding: 0.35rem 0.5rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
         .loading-spinner-sm {
             width: 24px;
             height: 24px;
@@ -93,17 +73,9 @@
             height: auto;
             border-radius: 8px;
         }
-        #paged-mode-container {
-            display: flex;
-            justify-content: center;
-            width: 100%;
-        }
         @media (max-width: 768px) {
             .reader-controls {
                 gap: 0.5rem;
-            }
-            .page-selector-wrapper label {
-                display: none;
             }
             .btn-sm-mobile {
                 padding: 0.3rem 0.6rem;
@@ -122,15 +94,13 @@
         <header class="reader-header">
             <div class="reader-nav">
                 <div class="reader-title">
-                    <h1 id="reader-manga-title">القراءة</h1>
+                    <a id="reader-manga-title-link" href="#" style="text-decoration: none; color: inherit;">
+                        <h1 id="reader-manga-title">القراءة</h1>
+                    </a>
                     <p id="reader-chapter-title"></p>
                 </div>
                 <div class="reader-actions">
                     <select id="chapter-select" class="reader-select"></select>
-                    <button id="toggle-view-mode-btn" class="btn btn-secondary" title="تبديل وضع العرض">📱 وضع الويب توون</button>
-                    <button id="fullscreen-btn" class="btn btn-secondary" title="ملء الشاشة (F)">⛶</button>
-                    <button id="theme-toggle-btn" class="btn btn-secondary" title="تبديل السمة">🌓</button>
-                    <button id="back-button" class="btn btn-secondary" title="العودة">🔙</button>
                 </div>
             </div>
         </header>
@@ -138,32 +108,15 @@
         <section class="reader-main" id="reader-main">
             <div id="reader-error" class="reader-error"></div>
             
-            <!-- وضع الصفحات المنفردة -->
-            <div id="paged-mode-container" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-                <img id="reader-page-image" class="reader-image" alt="" style="max-width: 100%;">
-            </div>
-            
             <!-- وضع الويب توون -->
-            <div id="reader-webtoon-pages" class="reader-webtoon-pages" hidden></div>
+            <div id="reader-webtoon-pages" class="reader-webtoon-pages"></div>
         </section>
 
         <footer class="reader-footer">
             <div class="reader-controls">
-                <button id="first-page-btn" class="btn btn-secondary" title="أول صفحة (Home)">⏮</button>
                 <button id="prev-chapter-btn" class="btn btn-secondary" title="الفصل السابق (P)">◀ الفصل السابق</button>
-                <button id="prev-page-btn" class="btn btn-secondary" title="الصفحة السابقة (←)">◀</button>
-                
-                <div class="page-selector-wrapper">
-                    <label>الصفحة</label>
-                    <select id="page-selector" class="page-selector">
-                        <option value="0">1</option>
-                    </select>
-                    <span id="total-pages-badge" style="font-size:0.7rem;">/ 0</span>
-                </div>
-                
-                <button id="next-page-btn" class="btn btn-secondary" title="الصفحة التالية (→)">▶</button>
+                <button id="fullscreen-btn" class="btn btn-secondary" title="ملء الشاشة (F)">⛶</button>
                 <button id="next-chapter-btn" class="btn btn-secondary" title="الفصل التالي (N)">الفصل التالي ▶</button>
-                <button id="last-page-btn" class="btn btn-secondary" title="آخر صفحة (End)">⏭</button>
             </div>
         </footer>
     </main>

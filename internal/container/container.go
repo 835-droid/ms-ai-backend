@@ -3,9 +3,10 @@ package container
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/835-droid/ms-ai-backend/internal/data/mongo"
-	"github.com/835-droid/ms-ai-backend/internal/data/postgres"
+	"github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
+	"github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 	"github.com/835-droid/ms-ai-backend/pkg/config"
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 )
@@ -23,16 +24,13 @@ func NewContainer(cfg *config.Config, log *logger.Logger) (*Container, error) {
 	initializeInitialData(ctx, cfg, repos, log)
 
 	return &Container{
-		Config:   cfg,
-		Logger:   log,
-		MongoDB:  mStore,
-		UserRepo: repos.User,
-		Handlers: initializeHandlers(svcs, mStore, pStore),
+		Config:     cfg,
+		Logger:     log,
+		MongoDB:    mStore,
+		PostgresDB: pStore,
+		UserRepo:   repos.User,
+		Handlers:   initializeHandlers(svcs, mStore, pStore),
 	}, nil
-}
-
-func InitializeDatabases(cfg *config.Config, log *logger.Logger) (*mongo.MongoStore, *postgres.PostgresStore, error) {
-	return initializeDatabases(cfg, log)
 }
 
 func InitializeRepositories(cfg *config.Config, log *logger.Logger, m *mongo.MongoStore, p *postgres.PostgresStore) *RepoBundle {
@@ -40,10 +38,22 @@ func InitializeRepositories(cfg *config.Config, log *logger.Logger, m *mongo.Mon
 }
 
 func (c *Container) Close(ctx context.Context) error {
+	var errEncountered error
 	if c.MongoDB != nil {
-		return c.MongoDB.Close(ctx)
+		if err := c.MongoDB.Close(ctx); err != nil {
+			errEncountered = fmt.Errorf("mongo close: %w", err)
+		}
 	}
-	return nil
+	if c.PostgresDB != nil {
+		if err := c.PostgresDB.Close(); err != nil {
+			if errEncountered != nil {
+				errEncountered = fmt.Errorf("%v; postgres close: %w", errEncountered, err)
+			} else {
+				errEncountered = fmt.Errorf("postgres close: %w", err)
+			}
+		}
+	}
+	return errEncountered
 }
 
 // ----- END OF FILE: backend/MS-AI/internal/container/container.go -----

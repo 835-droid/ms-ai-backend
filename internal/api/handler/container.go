@@ -6,8 +6,8 @@ import (
 	coreadmin "github.com/835-droid/ms-ai-backend/internal/core/admin"
 	coreauth "github.com/835-droid/ms-ai-backend/internal/core/auth"
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
-	datamongo "github.com/835-droid/ms-ai-backend/internal/data/mongo"
-	datapostgres "github.com/835-droid/ms-ai-backend/internal/data/postgres"
+	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
+	pginfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 )
 
 type Container struct {
@@ -23,8 +23,8 @@ func NewContainer(
 	mangaService coremanga.MangaService,
 	mangaChapterService coremanga.MangaChapterService,
 	adminService coreadmin.Service,
-	mongoStore *datamongo.MongoStore,
-	postgresStore *datapostgres.PostgresStore,
+	mongoStore *mongoinfra.MongoStore,
+	postgresStore *pginfra.PostgresStore,
 ) *Container {
 	var adminHandler *AdminHandler
 	if adminService != nil {

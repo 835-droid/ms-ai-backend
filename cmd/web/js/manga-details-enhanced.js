@@ -4,6 +4,7 @@ let currentChapters = [];
 let likeInFlight = false;
 let ratingInFlight = false;
 let favoriteInFlight = false;
+let reactionInFlight = false;
 let currentRating = 0;
 let galleryImages = [];
 let currentGalleryIndex = 0;
@@ -23,14 +24,57 @@ function formatRating(value) {
     return Number(value || 0).toFixed(1);
 }
 
+const userChapterRatingCache = {};
+let lastRatingRequestTimestamp = 0;
+const myRatingRequestIntervalMs = 150;
+
+async function fetchUserChapterRating(chapterId) {
+    if (!chapterId) return 0;
+    if (userChapterRatingCache[chapterId] !== undefined) {
+        return userChapterRatingCache[chapterId];
+    }
+
+    const wait = myRatingRequestIntervalMs - (Date.now() - lastRatingRequestTimestamp);
+    if (wait > 0) {
+        await new Promise(resolve => setTimeout(resolve, wait));
+    }
+
+    lastRatingRequestTimestamp = Date.now();
+
+    try {
+        const mangaId = getCurrentMangaId();
+        if (!mangaId) return 0;
+        const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/chapters/${encodeURIComponent(chapterId)}/my-rating`);
+        const rating = data.has_rated ? Number(data.score || 0) : 0;
+        userChapterRatingCache[chapterId] = rating;
+        return rating;
+    } catch (error) {
+        console.debug('Failed to load user chapter rating:', error);
+        return 0;
+    }
+}
+
 function getCurrentMangaId() {
     return currentManga?.id || currentManga?._id || getQueryParam('id');
+}
+
+// Debounce utility function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 // ========== إدارة المفضلة (LocalStorage + API إذا وُجد) ==========
 async function loadFavorites() {
     try {
-        const data = await apiFetch('/mangas/favorites/list');
+        const data = await apiFetch('/mangas/favorites');
         return data.items || [];
     } catch (error) {
         console.error('Failed to load favorites from API:', error);
@@ -63,10 +107,18 @@ async function toggleFavorite() {
 
         if (isFav) {
             await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/favorite`, { method: 'DELETE' });
+            currentManga.favorites_count = Math.max((currentManga.favorites_count || 0) - 1, 0);
             showToast('تمت إزالة من المفضلة', 'info');
         } else {
             await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/favorite`, { method: 'POST' });
+            currentManga.favorites_count = (currentManga.favorites_count || 0) + 1;
             showToast('أضيفت إلى المفضلة', 'success');
+        }
+
+        // Update favorites count in UI
+        const favCountEl = document.getElementById('favorites-count');
+        if (favCountEl) {
+            favCountEl.textContent = formatCompactNumber(currentManga.favorites_count);
         }
 
         updateFavoriteButton(!isFav);
@@ -125,9 +177,10 @@ async function handleLikeToggleEnhanced() {
             body: JSON.stringify({ type: 'upvote' })
         });
         currentManga = data.manga || { ...currentManga, ...data };
-        currentReactionType = data.reaction_type || 'upvote';
+        currentReactionType = data.removed ? null : (data.reaction_type || 'upvote');
         updateStatsUi();
-        showToast('تم تسجيل ردة فعلك! ♥', 'success');
+        const message = data.removed ? 'تم إلغاء ردة الفعل' : 'تم تسجيل ردة فعلك! ♥';
+        showToast(message, data.removed ? 'info' : 'success');
         // تحديث عداد الإعجابات في الزر
         const likeCountSpan = document.getElementById('like-count');
         if (likeCountSpan) likeCountSpan.textContent = formatCompactNumber(currentManga.likes_count);
@@ -140,27 +193,25 @@ async function handleLikeToggleEnhanced() {
 
 // ========== التقييم بالنجوم (مثل السابق) ==========
 function renderStars(ratingValue, interactive = false) {
+    // Keep read-only rating display; chapter-level ratings are 1-10.
     const container = document.getElementById('stars-container');
     if (!container) return;
-    const fullStars = Math.floor(ratingValue);
+    const maxStars = 10;
+    const fullStars = Math.floor(Math.min(ratingValue, maxStars));
     const hasHalf = ratingValue % 1 >= 0.5;
     container.innerHTML = '';
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= maxStars; i++) {
         const star = document.createElement('i');
         star.className = `fas fa-star star ${i <= fullStars ? 'active' : ''}`;
         if (i === fullStars + 1 && hasHalf && !(i <= fullStars)) {
             star.className = 'fas fa-star-half-alt star active';
         }
         star.dataset.value = i;
-        if (interactive) {
-            star.addEventListener('mouseenter', () => highlightStars(i));
-            star.addEventListener('mouseleave', () => resetStars());
-            star.addEventListener('click', () => submitRating(i));
-        }
+        // interactivity disabled for manga-level rating (deprecated)
         container.appendChild(star);
     }
     const avgSpan = document.getElementById('rating-average');
-    if (avgSpan) avgSpan.textContent = `(${formatRating(currentManga?.average_rating)} من 5)`;
+    if (avgSpan) avgSpan.textContent = `(${formatRating(currentManga?.average_rating)} من 10)`;
 }
 
 function highlightStars(value) {
@@ -173,28 +224,106 @@ function resetStars() {
     document.querySelectorAll('#stars-container .star').forEach(star => star.classList.remove('hover'));
 }
 // submitRating function removed - rating moved to chapter level
-/*
-async function submitRating(score) {
-    if (ratingInFlight) return;
+
+// ========== تقييم الفصول ==========
+async function renderChapterStars(chapterId) {
+    const container = document.getElementById(`chapter-stars-${chapterId}`);
+    if (!container) return;
+
     const mangaId = getCurrentMangaId();
     if (!mangaId) return;
-    ratingInFlight = true;
+
     try {
-        const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/rate`, {
+        // Fetch user's existing rating for this chapter with caching and throttling
+        const userRating = await fetchUserChapterRating(chapterId);
+
+        const maxStars = 10;
+        container.innerHTML = '';
+        for (let i = 1; i <= maxStars; i++) {
+            const star = document.createElement('i');
+            star.className = `fas fa-star chapter-star ${i <= userRating ? 'active' : ''}`;
+            star.dataset.value = i;
+            star.dataset.chapterId = chapterId;
+
+            // Always allow rating (including re-rating)
+            star.addEventListener('click', handleChapterRating);
+            star.addEventListener('mouseenter', (e) => highlightChapterStars(e.target.dataset.chapterId, e.target.dataset.value));
+            star.addEventListener('mouseleave', (e) => resetChapterStars(e.target.dataset.chapterId));
+
+            container.appendChild(star);
+        }
+    } catch (error) {
+        console.error('Failed to load user rating:', error);
+        // Fallback to empty stars if API fails
+        renderEmptyChapterStars(chapterId);
+    }
+}
+
+function renderEmptyChapterStars(chapterId) {
+    const container = document.getElementById(`chapter-stars-${chapterId}`);
+    if (!container) return;
+
+    const maxStars = 10;
+    container.innerHTML = '';
+    for (let i = 1; i <= maxStars; i++) {
+        const star = document.createElement('i');
+        star.className = `fas fa-star chapter-star`;
+        star.dataset.value = i;
+        star.dataset.chapterId = chapterId;
+        star.addEventListener('click', handleChapterRating);
+        star.addEventListener('mouseenter', (e) => highlightChapterStars(e.target.dataset.chapterId, e.target.dataset.value));
+        star.addEventListener('mouseleave', (e) => resetChapterStars(e.target.dataset.chapterId));
+        container.appendChild(star);
+    }
+}
+
+function highlightChapterStars(chapterId, value) {
+    document.querySelectorAll(`#chapter-stars-${chapterId} .chapter-star`).forEach((star, idx) => {
+        if (idx + 1 <= value) star.classList.add('hover');
+        else star.classList.remove('hover');
+    });
+}
+
+function resetChapterStars(chapterId) {
+    document.querySelectorAll(`#chapter-stars-${chapterId} .chapter-star`).forEach(star => star.classList.remove('hover'));
+}
+
+async function handleChapterRating(e) {
+    const chapterId = e.target.dataset.chapterId;
+    const score = parseInt(e.target.dataset.value);
+    const mangaId = getCurrentMangaId();
+
+    if (!mangaId || !chapterId) return;
+
+    try {
+        const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/chapters/${encodeURIComponent(chapterId)}/rate`, {
             method: 'POST',
             body: JSON.stringify({ score })
         });
-        currentManga = data.manga || { ...currentManga, ...data };
-        updateStatsUi();
-        renderStars(currentManga.average_rating || 0, true);
-        showToast(`قيمت بـ ${score} نجوم`, 'success');
+
+        showToast(`قيمت الفصل بـ ${score} نجوم`, 'success');
+
+        // Cache the new rating for this chapter and re-render
+        userChapterRatingCache[chapterId] = data.user_score || score;
+
+        // Re-render the stars to show the updated rating
+        await renderChapterStars(chapterId);
+
+        // Update the chapter data and re-render
+        const chapterIndex = currentChapters.findIndex(ch => (ch.id || ch._id) === chapterId);
+        if (chapterIndex !== -1) {
+            // Refresh chapter data from server
+            const chapterResp = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/chapters`);
+            currentChapters = chapterResp.chapters || [];
+            renderChapters();
+            // Refresh manga data to update stats
+            currentManga = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}`);
+            updateStatsUi();
+        }
     } catch (error) {
-        showToast(error.message, 'error');
-    } finally {
-        ratingInFlight = false;
+        showToast(error.message || 'فشل في تقييم الفصل', 'error');
     }
 }
-*/
 
 // ========== معرض الصور ==========
 function initGallery(images) {
@@ -283,36 +412,36 @@ function addResumeButton() {
     }
 }
 
-// ========== تحميل الفصل كملف PDF (معاينة) ==========
-function downloadChapterAsPDF(chapter) {
-    const pages = chapter.pages || [];
-    if (!pages.length) { showToast('لا توجد صفحات', 'error'); return; }
-    const htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${chapter.title} - الفصل ${chapter.number}</title><style>img{max-width:100%;margin:20px 0;}</style></head><body dir="rtl"><h1>${chapter.title}</h1>${pages.map(url => `<img src="${url}">`).join('')}</body></html>`;
-    const win = window.open();
-    win.document.write(htmlContent);
-    win.print();
-    showToast('تم فتح معاينة للطباعة', 'info');
-}
-
 // ========== إحصائيات متقدمة ==========
 function updateStatsUi() {
     if (!currentManga) return;
-    document.getElementById('stat-views').innerHTML = `<div class="stat-number">${formatCompactNumber(currentManga.views_count)}</div><div class="stat-label">مشاهدة</div>`;
-    document.getElementById('stat-likes').innerHTML = `<div class="stat-number">${formatCompactNumber(currentManga.likes_count)}</div><div class="stat-label">ردود فعل</div>`;
-    document.getElementById('stat-rating').innerHTML = `<div class="stat-number">${formatRating(currentManga.average_rating)}</div><div class="stat-label">التقييم</div>`;
-    document.getElementById('stat-chapters').innerHTML = `<div class="stat-number">${currentChapters.length}</div><div class="stat-label">فصل</div>`;
+    // Update favorites count if the element exists
+    const favCountEl = document.getElementById('favorites-count');
+    if (favCountEl) {
+        favCountEl.textContent = formatCompactNumber(currentManga.favorites_count);
+    }
+    // Update manga rating display
+    renderStars(currentManga.average_rating);
 }
 
 // ========== عرض تفاصيل المانجا مع أزرار الإعجاب والمفضلة ==========
-function renderMangaDetails() {
+async function renderMangaDetails() {
     const container = document.getElementById('manga-details');
     if (!container || !currentManga) return;
     const cover = currentManga.cover_image || '';
     galleryImages = [cover, ...(currentManga.gallery || [])].filter(Boolean);
-    const isFav = isFavorite(getCurrentMangaId());
     
-    // استخراج أول وأحدث فصل للربط بالأزرار
+    // استخدم حالة محايدة أولاً حتى لا يكون هناك Promise غير محلول في الواجهة
+    let initialFavState = false;
     const mangaId = getCurrentMangaId();
+    try {
+        initialFavState = await isFavorite(mangaId);
+    } catch (error) {
+        console.debug('Could not resolve initial favorite state:', error);
+        initialFavState = false;
+    }
+
+    // استخراج أول وأحدث فصل للربط بالأزرار
     const firstChapterId = currentChapters.length > 0 ? (currentChapters[currentChapters.length - 1].id || currentChapters[currentChapters.length - 1]._id) : null;
     const latestChapterId = currentChapters.length > 0 ? (currentChapters[0].id || currentChapters[0]._id) : null;
 
@@ -335,8 +464,13 @@ function renderMangaDetails() {
                     </div>
                     <div class="stat-item">
                         <i class="fas fa-bookmark" style="color: #8b5cf6;"></i>
-                        <strong>${formatCompactNumber(currentManga.likes_count)}</strong>
+                        <strong id="favorites-count">${formatCompactNumber(currentManga.favorites_count)}</strong>
                         <small>حفظ</small>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-eye" style="color: #06b6d4;"></i>
+                        <strong>${formatCompactNumber(currentManga.views_count)}</strong>
+                        <small>مشاهدة</small>
                     </div>
                 </div>
             </div>
@@ -353,8 +487,8 @@ function renderMangaDetails() {
                 </div>
                 
                 <div class="manga-action-buttons">
-                    <button id="favorite-btn" class="btn ${isFav ? 'btn-primary' : 'btn-secondary'}">
-                        <i class="fas fa-bookmark"></i> ${isFav ? 'مضافة للمفضلة' : 'إضافة للمفضلة'}
+                    <button id="favorite-btn" class="btn ${initialFavState ? 'btn-primary' : 'btn-secondary'}">
+                        <i class="fas fa-bookmark"></i> ${initialFavState ? 'مضافة للمفضلة' : 'إضافة للمفضلة'}
                     </button>
                     ${firstChapterId ? `<a href="${webPagePath('manga-reader.html')}?mangaId=${mangaId}&chapterId=${firstChapterId}" class="btn btn-secondary"><i class="fas fa-eye"></i> أول فصل</a>` : ''}
                     ${latestChapterId ? `<a href="${webPagePath('manga-reader.html')}?mangaId=${mangaId}&chapterId=${latestChapterId}" class="btn btn-secondary"><i class="fas fa-clock"></i> أحدث فصل</a>` : ''}
@@ -370,6 +504,14 @@ function renderMangaDetails() {
     // ربط الأحداث
     document.getElementById('favorite-btn')?.addEventListener('click', toggleFavorite);
     if (galleryImages.length > 1) initGallery(galleryImages);
+
+    // تابع حالة المفضلة بعد التحميل وقم بالتحديث إذا تغيرت
+    try {
+        const resolvedFav = await isFavorite(mangaId);
+        updateFavoriteButton(resolvedFav);
+    } catch (error) {
+        console.debug('Failed to refresh favorite state after render:', error);
+    }
 }
 
 // ========== تحميل ردة فعل المستخدم الحالية ==========
@@ -379,29 +521,15 @@ async function loadUserReaction() {
     try {
         const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/my-reaction`);
         currentReactionType = data.reaction_type || null;
-        // Update UI to show reaction status
-        updateReactionUI();
+        // Update UI to show reaction status - handled by updateReactionCounts()
     } catch (error) {
         console.debug('Failed to load user reaction:', error.message);
         currentReactionType = null;
     }
 }
 
-// تحديث واجهة المستخدم لعرض حالة التفاعل
-function updateReactionUI() {
-    const btn = document.getElementById('like-button-enhanced');
-    if (!btn) return;
-    if (currentReactionType) {
-        btn.classList.add('has-reaction');
-        btn.dataset.reaction = currentReactionType;
-    } else {
-        btn.classList.remove('has-reaction');
-        btn.removeAttribute('data-reaction');
-    }
-}
-
 // ========== عرض الفصول المحسنة مع شريط تقدم ==========
-function renderChapters() {
+async function renderChapters() {
     const container = document.getElementById('chapters-container');
     if (!container) return;
     if (!currentChapters.length) {
@@ -418,6 +546,7 @@ function renderChapters() {
         const bookmarkKey = `${mangaId}_${chapterId}`;
         const bookmark = bookmarks[bookmarkKey];
         const progress = bookmark ? ((bookmark.pageIndex + 1) / pagesCount) * 100 : 0;
+        const hasViewed = chapter.has_user_viewed || false;
         return `
             <div class="chapter-item-enhanced">
                 <div class="chapter-info">
@@ -430,19 +559,56 @@ function renderChapters() {
                         ${progress > 0 ? `<span><i class="fas fa-chart-line"></i> ${Math.round(progress)}% مكتمل</span>` : ''}
                     </div>
                     <div class="read-progress"><div class="read-progress-fill" style="width: ${progress}%;"></div></div>
+                    ${hasViewed ? `
+                        <div class="chapter-rating" data-chapter-id="${chapterId}">
+                            <div class="rating-stars" id="chapter-stars-${chapterId}"></div>
+                            <span class="rating-text">قيم هذا الفصل (1-10)</span>
+                        </div>
+                    ` : `
+                        <div class="chapter-rating-placeholder">
+                            <span class="rating-placeholder-text">اقرأ الفصل أولاً لتقييمه</span>
+                        </div>
+                    `}
                 </div>
                 <div class="chapter-actions">
                     <a href="${webPagePath('manga-reader.html')}?mangaId=${encodeURIComponent(mangaId)}&chapterId=${encodeURIComponent(chapterId)}" class="btn btn-primary btn-sm"><i class="fas fa-book-open"></i> اقرأ</a>
-                    <button class="btn btn-secondary btn-sm download-chapter" data-chapter-id="${chapterId}"><i class="fas fa-download"></i></button>
+                    <button class="btn btn-secondary btn-sm chapter-comments-btn" data-chapter-id="${chapterId}"><i class="fas fa-comments"></i> تعليقات</button>
                 </div>
             </div>
         `;
     }).join('');
-    document.querySelectorAll('.download-chapter').forEach(btn => {
+
+    // Initialize chapter ratings in limited concurrency to avoid too many concurrent my-rating calls
+    const chaptersToRender = currentChapters
+        .map(chapter => ({ chapter, chapterId: chapter.id || chapter._id }))
+        .filter(({ chapter }) => chapter.has_user_viewed);
+
+    const maxConcurrent = 4;
+    let index = 0;
+
+    async function renderNextChapter() {
+        while (true) {
+            let nextIndex;
+            // lock-free retrieval; JS is single-threaded so this is safe here
+            if (index >= chaptersToRender.length) return;
+            nextIndex = index;
+            index += 1;
+
+            const chapterId = chaptersToRender[nextIndex].chapterId;
+            try {
+                await renderChapterStars(chapterId);
+            } catch (error) {
+                console.debug('Failed to render chapter stars for', chapterId, error);
+            }
+        }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(maxConcurrent, chaptersToRender.length) }, () => renderNextChapter()));
+
+    document.querySelectorAll('.chapter-comments-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const chapterId = btn.dataset.chapterId;
-            const chapter = currentChapters.find(ch => (ch.id || ch._id) === chapterId);
-            if (chapter) downloadChapterAsPDF(chapter);
+            openChapterCommentsModal(chapterId);
         });
     });
 }
@@ -479,6 +645,34 @@ async function loadRecommendations() {
     }
 }
 
+// Track which mangas have had their view counted in this session to prevent double-counting
+const viewedMangaSession = new Set();
+
+// Record a view for the current manga (with per-manga session guard)
+async function recordMangaView(mangaId) {
+    if (!mangaId) return;
+    // Per-manga guard: only record once per page session
+    if (viewedMangaSession.has(mangaId)) return;
+    viewedMangaSession.add(mangaId);
+
+    try {
+        // Use optional auth endpoint - works for both authenticated and anonymous users
+        await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/view`, { method: 'POST' });
+        // Update the in-memory view count after successful response
+        if (currentManga) {
+            currentManga.views_count = (currentManga.views_count || 0) + 1;
+            // Update the views display in the stats box
+            const viewsEl = document.querySelector('.stat-item[style*="fa-eye"] strong');
+            if (viewsEl) {
+                viewsEl.textContent = formatCompactNumber(currentManga.views_count);
+            }
+        }
+    } catch (error) {
+        // Silently fail - view tracking should not disrupt the user experience
+        console.debug('Failed to record manga view:', error);
+    }
+}
+
 // ========== تحميل الصفحة الرئيسية مع Skeleton ==========
 async function loadMangaDetailsPage() {
     if (!requireAuth()) return;
@@ -500,6 +694,9 @@ async function loadMangaDetailsPage() {
         updateReactionCounts();
         document.getElementById('manga-title-header').textContent = currentManga.title;
         document.getElementById('manga-subtitle').textContent = `${currentChapters.length} فصل | ${currentManga.tags?.length || 0} تصنيف`;
+
+        // Record view for trending/most-viewed tracking (after successful page load)
+        await recordMangaView(mangaId);
     } catch (error) {
         setError(document.getElementById('manga-details'), error.message);
     }
@@ -544,7 +741,7 @@ let commentsPage = 1;
 let commentsTotal = 0;
 let commentsLoading = false;
 
-async function loadComments(page = 1) {
+async function loadComments(page = 1, sortOrder = null) {
     if (commentsLoading) return;
     commentsLoading = true;
 
@@ -560,7 +757,8 @@ async function loadComments(page = 1) {
 
     try {
         const mangaId = getCurrentMangaId();
-        const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/comments?page=${page}&limit=10`);
+        const sort = sortOrder || document.getElementById('comments-sort')?.value || 'newest';
+        const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/comments?page=${page}&limit=10&sort=${sort}`);
         const newComments = data.data || [];
 
         if (page === 1) {
@@ -596,7 +794,7 @@ function renderComments() {
         <div class="comment-item" data-comment-id="${comment.id}">
             <div class="comment-header">
                 <div class="comment-author">
-                    <div class="comment-avatar">${(comment.author_name || 'مستخدم')[0].toUpperCase()}</div>
+                    <div class="comment-avatar">${(comment.author_name || 'مستخدم').substring(0, 2)}</div>
                     <span class="comment-author-name">${escapeHtml(comment.author_name || 'مستخدم')}</span>
                     <span class="comment-date">${formatCommentDate(comment.created_at)}</span>
                 </div>
@@ -607,12 +805,22 @@ function renderComments() {
     `).join('');
 
     // Add delete event listeners
-    document.querySelectorAll('.comment-delete-btn').forEach(btn => {
+    container.querySelectorAll('.comment-delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const commentId = e.currentTarget.dataset.commentId;
             deleteComment(commentId);
         });
     });
+
+    // Add load more button if there are more comments
+    if (mangaComments.length < commentsTotal) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.id = 'load-more-comments';
+        loadMoreBtn.className = 'btn btn-secondary';
+        loadMoreBtn.innerHTML = '<i class="fas fa-plus"></i> تحميل المزيد';
+        loadMoreBtn.addEventListener('click', () => loadComments(commentsPage + 1));
+        container.appendChild(loadMoreBtn);
+    }
 }
 
 async function submitComment() {
@@ -662,6 +870,230 @@ async function deleteComment(commentId) {
     }
 }
 
+// ========== تعليقات الفصول ==========
+let currentChapterComments = [];
+let currentChapterId = null;
+let chapterCommentsPage = 1;
+let chapterCommentsTotal = 0;
+let chapterCommentsLoading = false;
+
+async function openChapterCommentsModal(chapterId) {
+    currentChapterId = chapterId;
+    currentChapterComments = [];
+    chapterCommentsPage = 1;
+    chapterCommentsTotal = 0;
+
+    const modal = document.getElementById('chapter-comments-modal');
+    if (!modal) {
+        // Create modal if it doesn't exist
+        createChapterCommentsModal();
+    }
+
+    document.getElementById('chapter-comments-modal').style.display = 'block';
+    const sortOrder = document.getElementById('chapter-comments-sort')?.value || 'newest';
+    await loadChapterComments(1, sortOrder);
+}
+
+function createChapterCommentsModal() {
+    const modal = document.createElement('div');
+    modal.id = 'chapter-comments-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content chapter-comments-modal-content">
+            <div class="modal-header">
+                <h3>تعليقات الفصل</h3>
+                <span class="close-modal" id="close-chapter-comments">&times;</span>
+            </div>
+            <div class="comments-controls" style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div class="sort-controls">
+                    <label for="chapter-comments-sort" style="margin-right: 0.5rem;">ترتيب:</label>
+                    <select id="chapter-comments-sort" class="form-control" style="padding: 0.25rem 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="newest">الأحدث أولاً</option>
+                        <option value="oldest">الأقدم أولاً</option>
+                    </select>
+                </div>
+            </div>
+            <div id="chapter-comments-container">
+                <div id="add-chapter-comment-form" class="comment-form" style="display:none;">
+                    <textarea id="chapter-comment-content" placeholder="اكتب تعليقك على هذا الفصل..." rows="3" maxlength="1000"></textarea>
+                    <div class="comment-actions">
+                        <button id="submit-chapter-comment" class="btn btn-primary">إرسال</button>
+                        <button id="cancel-chapter-comment" class="btn btn-secondary">إلغاء</button>
+                    </div>
+                </div>
+                <button id="show-chapter-comment-form" class="btn btn-secondary" style="margin-bottom: 1rem;"><i class="fas fa-plus"></i> أضف تعليق</button>
+                <div id="chapter-comments-list" class="comments-list"></div>
+                <div id="chapter-comments-loading" class="loading-state" style="display:none;">جاري تحميل التعليقات...</div>
+                <div id="chapter-comments-empty" class="empty-state" style="display:none;">لا توجد تعليقات على هذا الفصل بعد.</div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Add event listeners
+    document.getElementById('close-chapter-comments').addEventListener('click', () => {
+        document.getElementById('chapter-comments-modal').style.display = 'none';
+    });
+
+    // Add sort change listener
+    document.getElementById('chapter-comments-sort').addEventListener('change', (e) => {
+        loadChapterComments(1, e.target.value);
+    });
+
+    document.getElementById('show-chapter-comment-form').addEventListener('click', () => {
+        document.getElementById('add-chapter-comment-form').style.display = 'block';
+        document.getElementById('show-chapter-comment-form').style.display = 'none';
+    });
+
+    document.getElementById('cancel-chapter-comment').addEventListener('click', () => {
+        document.getElementById('add-chapter-comment-form').style.display = 'none';
+        document.getElementById('show-chapter-comment-form').style.display = 'block';
+        document.getElementById('chapter-comment-content').value = '';
+    });
+
+    document.getElementById('submit-chapter-comment').addEventListener('click', submitChapterComment);
+
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+async function loadChapterComments(page = 1, sortOrder = 'newest') {
+    if (chapterCommentsLoading || !currentChapterId) return;
+
+    chapterCommentsLoading = true;
+    const loading = document.getElementById('chapter-comments-loading');
+    const empty = document.getElementById('chapter-comments-empty');
+    const list = document.getElementById('chapter-comments-list');
+
+    if (page === 1) {
+        loading.style.display = 'block';
+        empty.style.display = 'none';
+        list.innerHTML = '';
+    }
+
+    try {
+        const mangaId = getCurrentMangaId();
+        const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/chapters/${encodeURIComponent(currentChapterId)}/comments?page=${page}&limit=20&sort=${sortOrder}`);
+
+        if (page === 1) {
+            currentChapterComments = data.data || [];
+        } else {
+            currentChapterComments = [...currentChapterComments, ...(data.data || [])];
+        }
+
+        chapterCommentsTotal = data.total || 0;
+        chapterCommentsPage = page;
+
+        renderChapterComments();
+
+        if (currentChapterComments.length === 0) {
+            empty.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Failed to load chapter comments:', error);
+        if (page === 1) {
+            list.innerHTML = '<div class="error-state">فشل في تحميل التعليقات</div>';
+        }
+    } finally {
+        loading.style.display = 'none';
+        chapterCommentsLoading = false;
+    }
+}
+
+function renderChapterComments() {
+    const container = document.getElementById('chapter-comments-list');
+    if (!currentChapterComments.length) return;
+
+    container.innerHTML = currentChapterComments.map(comment => `
+        <div class="comment-item" data-comment-id="${comment.id}">
+            <div class="comment-header">
+                <div class="comment-author">
+                    <div class="comment-avatar">${(comment.author_name || 'مستخدم').substring(0, 2)}</div>
+                    <span class="comment-author-name">${escapeHtml(comment.author_name || 'مستخدم')}</span>
+                    <span class="comment-date">${formatCommentDate(comment.created_at)}</span>
+                </div>
+                ${comment.can_delete ? `<button class="comment-delete-btn" data-comment-id="${comment.id}"><i class="fas fa-trash"></i></button>` : ''}
+            </div>
+            <div class="comment-content">${escapeHtml(comment.content)}</div>
+        </div>
+    `).join('');
+
+    // Add delete event listeners
+    container.querySelectorAll('.comment-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const commentId = e.currentTarget.dataset.commentId;
+            deleteChapterComment(commentId);
+        });
+    });
+
+    // Add load more button if there are more comments
+    if (currentChapterComments.length < chapterCommentsTotal) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.id = 'load-more-chapter-comments';
+        loadMoreBtn.className = 'btn btn-secondary';
+        loadMoreBtn.innerHTML = '<i class="fas fa-plus"></i> تحميل المزيد';
+        loadMoreBtn.addEventListener('click', () => {
+            const sortOrder = document.getElementById('chapter-comments-sort').value;
+            loadChapterComments(chapterCommentsPage + 1, sortOrder);
+        });
+        container.appendChild(loadMoreBtn);
+    }
+}
+
+async function submitChapterComment() {
+    const content = document.getElementById('chapter-comment-content').value.trim();
+    if (!content) {
+        showToast('يرجى كتابة تعليق', 'warning');
+        return;
+    }
+
+    const submitBtn = document.getElementById('submit-chapter-comment');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'جاري الإرسال...';
+
+    try {
+        const mangaId = getCurrentMangaId();
+        await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/chapters/${encodeURIComponent(currentChapterId)}/comments`, {
+            method: 'POST',
+            body: JSON.stringify({ content })
+        });
+
+        document.getElementById('chapter-comment-content').value = '';
+        document.getElementById('add-chapter-comment-form').style.display = 'none';
+        document.getElementById('show-chapter-comment-form').style.display = 'block';
+        showToast('تم إرسال التعليق بنجاح', 'success');
+        const sortOrder = document.getElementById('chapter-comments-sort').value;
+        await loadChapterComments(1, sortOrder); // Reload comments
+    } catch (error) {
+        showToast(error.message || 'فشل في إرسال التعليق', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+}
+
+async function deleteChapterComment(commentId) {
+    if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+
+    try {
+        const mangaId = getCurrentMangaId();
+        await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/chapters/${encodeURIComponent(currentChapterId)}/comments/${encodeURIComponent(commentId)}`, {
+            method: 'DELETE'
+        });
+
+        showToast('تم حذف التعليق', 'success');
+        const sortOrder = document.getElementById('chapter-comments-sort').value;
+        await loadChapterComments(1, sortOrder); // Reload comments
+    } catch (error) {
+        showToast(error.message || 'فشل في حذف التعليق', 'error');
+    }
+}
+
 function showCommentForm() {
     document.getElementById('add-comment-form').style.display = 'block';
     document.getElementById('show-comment-form').style.display = 'none';
@@ -697,6 +1129,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-comment-form')?.addEventListener('click', showCommentForm);
     document.getElementById('cancel-comment')?.addEventListener('click', hideCommentForm);
     document.getElementById('submit-comment')?.addEventListener('click', submitComment);
+    document.getElementById('comments-sort')?.addEventListener('change', (e) => {
+        loadComments(1, e.target.value);
+    });
 });
 // ========== Reaction Picker System ==========
 const REACTION_TYPES = {
@@ -714,23 +1149,48 @@ function toggleReactionPicker() {
     picker.classList.toggle('active');
 }
 
-async function handleReaction(reactionType) {
+async function handleReaction(reactionType, originElement) {
     const mangaId = getCurrentMangaId();
-    if (!mangaId || likeInFlight) return;
+    if (!mangaId || reactionInFlight) return;
     
-    likeInFlight = true;
+    // Store original state for rollback
+    const previousReaction = currentReactionType;
+    const originalCounts = { ...currentManga.reactions_count };
+    
+    // Optimistic UI update - update both state and counts
+    currentReactionType = reactionType;
+    
+    // Perform optimistic count mutation
+    if (!currentManga.reactions_count) currentManga.reactions_count = {};
+    
+    // If there was a previous reaction, decrement it
+    if (previousReaction) {
+        currentManga.reactions_count[previousReaction] = Math.max(0, (currentManga.reactions_count[previousReaction] || 0) - 1);
+    }
+    
+    // If new reaction is different from previous, increment it
+    // If same reaction, it means we're toggling off (already decremented above)
+    if (reactionType !== previousReaction) {
+        currentManga.reactions_count[reactionType] = (currentManga.reactions_count[reactionType] || 0) + 1;
+    } else {
+        // Same reaction clicked - we're removing it, so currentReactionType should be null
+        currentReactionType = null;
+    }
+    
+    updateReactionCounts();
+    
+    reactionInFlight = true;
     try {
         const data = await apiFetch(`/mangas/${encodeURIComponent(mangaId)}/react`, { 
             method: 'POST',
             body: JSON.stringify({ type: reactionType })
         });
         currentManga = data.manga || { ...currentManga, ...data };
-        currentReactionType = data.reaction_type || reactionType;
+        currentReactionType = data.removed ? null : (data.reaction_type || reactionType);
         
         updateStatsUi();
-        updateReactionUI();
         updateReactionCounts();
-        animateReactionConfetti(reactionType);
+        animateReactionConfetti(reactionType, originElement);
         
         const label = REACTION_TYPES[reactionType]?.label || reactionType;
         showToast(`ردة فعلك: ${label} ${REACTION_TYPES[reactionType]?.emoji}`, 'success');
@@ -738,19 +1198,27 @@ async function handleReaction(reactionType) {
         const picker = document.getElementById('reaction-picker');
         if (picker) picker.classList.remove('active');
     } catch (error) {
+        // Revert optimistic update on error
+        currentReactionType = previousReaction;
+        currentManga.reactions_count = originalCounts;
+        updateReactionCounts();
         showToast(error.message, 'error');
     } finally {
-        likeInFlight = false;
+        reactionInFlight = false;
     }
 }
 
-function animateReactionConfetti(reactionType) {
+// Debounced reaction functions
+const debouncedHandleReaction = debounce((reactionType, originElement) => handleReaction(reactionType, originElement), 300);
+const debouncedHandleLikeToggle = debounce(handleLikeToggleEnhanced, 500);
+
+function animateReactionConfetti(reactionType, originElement) {
     const emoji = REACTION_TYPES[reactionType]?.emoji || '👍';
-    const btn = document.querySelector('.reaction-bar-btn');
+    const btn = originElement || document.querySelector('.reaction-bar-btn');
     if (!btn) return;
     
     const rect = btn.getBoundingClientRect();
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 8; i++) {
         const particle = document.createElement('div');
         particle.style.cssText = `
             position: fixed;
@@ -764,33 +1232,30 @@ function animateReactionConfetti(reactionType) {
         particle.style.opacity = '1';
         document.body.appendChild(particle);
         
-        // Animate particle
+        // Random directions
+        const angle = (Math.PI / 4) * (Math.random() - 0.5); // -22.5 to 22.5 degrees
+        const speed = 2 + Math.random() * 2; // 2-4 px per frame
+        
+        let x = 0;
         let y = 0;
-        const interval = setInterval(() => {
-            y -= 2;
-            particle.style.transform = `translateY(${y}px)`;
-            particle.style.opacity = Math.max(0, (500 - y) / 500);
-            if (y <= -100) {
-                clearInterval(interval);
+        let opacity = 1;
+        
+        function animate() {
+            x += Math.sin(angle) * speed;
+            y -= Math.cos(angle) * speed;
+            opacity = Math.max(0, 1 - Math.abs(y) / 100);
+            
+            particle.style.transform = `translate(${x}px, ${y}px)`;
+            particle.style.opacity = opacity;
+            
+            if (opacity > 0) {
+                requestAnimationFrame(animate);
+            } else {
                 particle.remove();
             }
-        }, 10);
-    }
-}
-
-function updateReactionUI() {
-    const btn = document.querySelector('.reaction-bar-btn');
-    if (!btn) return;
-    
-    if (currentReactionType) {
-        btn.classList.add('has-reaction');
-        const reaction = REACTION_TYPES[currentReactionType];
-        if (reaction) {
-            btn.innerHTML = `${reaction.emoji} ${reaction.label} <i class="fas fa-chevron-down"></i>`;
         }
-    } else {
-        btn.classList.remove('has-reaction');
-        btn.innerHTML = '<i class="fas fa-smile"></i> تفاعل <i class="fas fa-chevron-down"></i>';
+        
+        requestAnimationFrame(animate);
     }
 }
 
@@ -800,6 +1265,9 @@ function updateReactionCounts() {
     
     const reactionsCount = currentManga.reactions_count || {};
     const totalReactions = Object.values(reactionsCount).reduce((a, b) => a + b, 0);
+    
+    // Preserve scroll position
+    const scrollTop = countsContainer.scrollTop;
     
     // الترتيب المطلوب ظهوره دائماً (مثل الصورة الثانية)
     const order = ['upvote', 'funny', 'love', 'surprised', 'angry', 'sad'];
@@ -815,7 +1283,7 @@ function updateReactionCounts() {
                 const count = reactionsCount[type] || 0;
                 const isUserReacted = currentReactionType === type;
                 return `
-                    <div class="reaction-item-new ${isUserReacted ? 'active' : ''}" onclick="handleReaction('${type}')">
+                    <div class="reaction-item-new ${isUserReacted ? 'active' : ''}" data-reaction-type="${type}">
                         <div class="reaction-emoji-new">${reaction.emoji}</div>
                         <div class="reaction-count-new">${formatCompactNumber(count)}</div>
                         <div class="reaction-label-new">${reaction.label}</div>
@@ -824,6 +1292,22 @@ function updateReactionCounts() {
             }).join('')}
         </div>
     `;
+    
+    // Restore scroll position
+    countsContainer.scrollTop = scrollTop;
+    
+    // Bind event listeners programmatically
+    document.querySelectorAll('.reaction-item-new').forEach(item => {
+        item.addEventListener('click', () => {
+            const reactionType = item.dataset.reactionType;
+            if (reactionType) {
+                // Add animating class temporarily
+                item.classList.add('animating');
+                setTimeout(() => item.classList.remove('animating'), 350);
+                debouncedHandleReaction(reactionType, item);
+            }
+        });
+    });
 }
 
 

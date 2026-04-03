@@ -56,7 +56,7 @@ async function loadFavorites() {
     setLoading(document.getElementById('favorites-grid'), 'تحميل المفضلة...');
 
     try {
-        const data = await apiFetch('/mangas/favorites/list');
+        const data = await apiFetch('/mangas/favorites');
         favoritesList = data.items || [];
         renderFavorites(favoritesList);
     } catch (error) {

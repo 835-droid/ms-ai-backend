@@ -53,4 +53,22 @@ func FromStrings(strings []string) Roles {
 	return roles
 }
 
+// Add adds a role to the collection if not already present
+func (r Roles) Add(role Role) Roles {
+	if r.Has(role) {
+		return r
+	}
+	return append(r, role)
+}
+
+// Remove removes a role from the collection
+func (r Roles) Remove(role Role) Roles {
+	for i, existing := range r {
+		if existing == role {
+			return append(r[:i], r[i+1:]...)
+		}
+	}
+	return r
+}
+
 // ----- END OF FILE: backend/MS-AI/internal/core/user/role.go -----

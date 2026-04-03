@@ -30,11 +30,15 @@ type User struct {
 }
 
 type UserDetails struct {
-	UUID     string      `bson:"uuid" json:"uuid"`
-	UserID   string      `bson:"user_id" json:"user_id"`
-	Profile  UserProfile `bson:"profile" json:"profile"`
-	Status   string      `bson:"status" json:"status"` // (active, banned, pending)
-	UserBase             // embedded
+	UUID                  string      `bson:"uuid" json:"uuid"`
+	UserID                string      `bson:"user_id" json:"user_id"`
+	Profile               UserProfile `bson:"profile" json:"profile"`
+	Status                string      `bson:"status" json:"status"` // (active, banned, pending)
+	LastLoginAt           *time.Time  `bson:"last_login_at,omitempty" json:"last_login_at,omitempty"`
+	RefreshToken          string      `bson:"refresh_token,omitempty" json:"-"`
+	RefreshTokenExpiresAt *time.Time  `bson:"refresh_token_expires_at,omitempty" json:"-"`
+	CreatedAt             time.Time   `bson:"created_at" json:"created_at"`
+	UpdatedAt             time.Time   `bson:"updated_at" json:"updated_at"`
 }
 
 type UserProfile struct {

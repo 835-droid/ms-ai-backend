@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/835-droid/ms-ai-backend/internal/data/mongo"
-	"github.com/835-droid/ms-ai-backend/internal/data/postgres"
+	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
+	pginfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 	"github.com/835-droid/ms-ai-backend/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -19,14 +19,14 @@ type HealthChecker interface {
 }
 
 type Handler struct {
-	mongoStore    *mongo.MongoStore
-	postgresStore *postgres.PostgresStore
+	mongoStore    *mongoinfra.MongoStore
+	postgresStore *pginfra.PostgresStore
 	lastCheck     time.Time
 	isReady       bool
 }
 
 // NewHandler creates a new health handler
-func NewHandler(m *mongo.MongoStore, p *postgres.PostgresStore) *Handler {
+func NewHandler(m *mongoinfra.MongoStore, p *pginfra.PostgresStore) *Handler {
 	return &Handler{
 		mongoStore:    m,
 		postgresStore: p,
@@ -98,9 +98,9 @@ func (h *Handler) GetMetrics(c *gin.Context) {
 		}
 	}
 	if h.postgresStore != nil {
-		// PostgreSQL stats could be added here
+		stats := h.postgresStore.GetStats()
 		metrics["postgres"] = gin.H{
-			"connected": true,
+			"stats": stats,
 		}
 	}
 	response.SuccessResp(c, http.StatusOK, metrics)

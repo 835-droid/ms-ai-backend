@@ -11,8 +11,8 @@ import (
 	coreauth "github.com/835-droid/ms-ai-backend/internal/core/auth"
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
 
-	datamongo "github.com/835-droid/ms-ai-backend/internal/data/mongo"
-	datapostgres "github.com/835-droid/ms-ai-backend/internal/data/postgres"
+	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
+	pginfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 )
 
 type AuthHandler = auth.Handler
@@ -29,7 +29,7 @@ func NewAdminHandler(s coreadmin.Service) *admin.Handler {
 	return admin.NewHandler(s)
 }
 
-func NewHealthHandler(m *datamongo.MongoStore, p *datapostgres.PostgresStore) *health.Handler {
+func NewHealthHandler(m *mongoinfra.MongoStore, p *pginfra.PostgresStore) *health.Handler {
 	return health.NewHandler(m, p)
 }
 

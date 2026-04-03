@@ -21,6 +21,10 @@ type MangaService interface {
 	GetManga(ctx context.Context, id primitive.ObjectID) (*Manga, error)
 	ListMangas(ctx context.Context, skip, limit int64) ([]*Manga, int64, error)
 	IncrementViews(ctx context.Context, id primitive.ObjectID) (*Manga, error)
+	ListMostViewed(ctx context.Context, period string, skip, limit int64) ([]*RankedManga, error)
+	ListRecentlyUpdated(ctx context.Context, skip, limit int64) ([]*Manga, error)
+	ListMostFollowed(ctx context.Context, skip, limit int64) ([]*Manga, error)
+	ListTopRated(ctx context.Context, skip, limit int64) ([]*Manga, error)
 	SetReaction(ctx context.Context, id, userID primitive.ObjectID, reactionType ReactionType) (*Manga, string, error)
 	GetUserReaction(ctx context.Context, mangaID, userID primitive.ObjectID) (string, error)
 	ListLikedMangas(ctx context.Context, userID primitive.ObjectID, skip, limit int64) ([]*Manga, int64, error)
@@ -33,7 +37,7 @@ type MangaService interface {
 	IsFavorite(ctx context.Context, mangaID, userID primitive.ObjectID) (bool, error)
 	ListFavorites(ctx context.Context, userID primitive.ObjectID, skip, limit int64) ([]*Manga, int64, error)
 	AddMangaComment(ctx context.Context, comment *MangaComment) error
-	ListMangaComments(ctx context.Context, mangaID primitive.ObjectID, skip, limit int64) ([]*MangaComment, int64, error)
+	ListMangaComments(ctx context.Context, mangaID primitive.ObjectID, skip, limit int64, sortOrder string) ([]*MangaComment, int64, error)
 	DeleteMangaComment(ctx context.Context, commentID, userID primitive.ObjectID) error
 }
 
@@ -96,6 +100,13 @@ func (s *DefaultMangaService) GetManga(ctx context.Context, id primitive.ObjectI
 		return nil, err
 	}
 
+	if manga == nil {
+		s.log.Error("manga not found", map[string]interface{}{
+			"id": id.Hex(),
+		})
+		return nil, core.ErrMangaNotFound
+	}
+
 	s.log.Debug("manga retrieved", map[string]interface{}{
 		"id":    manga.ID.Hex(),
 		"title": manga.Title,
@@ -127,7 +138,7 @@ func (s *DefaultMangaService) ListMangas(ctx context.Context, skip, limit int64)
 
 // IncrementViews increases the manga view count and returns the updated manga.
 func (s *DefaultMangaService) IncrementViews(ctx context.Context, id primitive.ObjectID) (*Manga, error) {
-	if err := s.repo.IncrementViews(ctx, id); err != nil {
+	if err := s.repo.LogView(ctx, id); err != nil {
 		s.log.Error("increment manga views failed", map[string]interface{}{
 			"id":    id.Hex(),
 			"error": err.Error(),
@@ -135,6 +146,36 @@ func (s *DefaultMangaService) IncrementViews(ctx context.Context, id primitive.O
 		return nil, err
 	}
 	return s.repo.GetMangaByID(ctx, id)
+}
+
+func (s *DefaultMangaService) ListMostViewed(ctx context.Context, period string, skip, limit int64) ([]*RankedManga, error) {
+	var since time.Time
+	now := time.Now()
+	switch strings.ToLower(period) {
+	case "day":
+		since = now.AddDate(0, 0, -1)
+	case "week":
+		since = now.AddDate(0, 0, -7)
+	case "month":
+		since = now.AddDate(0, -1, 0)
+	case "all":
+		since = time.Time{} // beginning of time
+	default:
+		since = now.AddDate(0, 0, -1) // default to day
+	}
+	return s.repo.ListMostViewed(ctx, since, skip, limit)
+}
+
+func (s *DefaultMangaService) ListRecentlyUpdated(ctx context.Context, skip, limit int64) ([]*Manga, error) {
+	return s.repo.ListRecentlyUpdated(ctx, skip, limit)
+}
+
+func (s *DefaultMangaService) ListMostFollowed(ctx context.Context, skip, limit int64) ([]*Manga, error) {
+	return s.repo.ListMostFollowed(ctx, skip, limit)
+}
+
+func (s *DefaultMangaService) ListTopRated(ctx context.Context, skip, limit int64) ([]*Manga, error) {
+	return s.repo.ListTopRated(ctx, skip, limit)
 }
 
 // SetReaction sets or toggles a reaction for a manga and returns the updated manga.
@@ -391,14 +432,15 @@ func (s *DefaultMangaService) AddMangaComment(ctx context.Context, comment *Mang
 }
 
 // ListMangaComments retrieves comments for a manga.
-func (s *DefaultMangaService) ListMangaComments(ctx context.Context, mangaID primitive.ObjectID, skip, limit int64) ([]*MangaComment, int64, error) {
+func (s *DefaultMangaService) ListMangaComments(ctx context.Context, mangaID primitive.ObjectID, skip, limit int64, sortOrder string) ([]*MangaComment, int64, error) {
 	s.log.Debug("listing manga comments", map[string]interface{}{
-		"manga_id": mangaID.Hex(),
-		"skip":     skip,
-		"limit":    limit,
+		"manga_id":  mangaID.Hex(),
+		"skip":      skip,
+		"limit":     limit,
+		"sortOrder": sortOrder,
 	})
 
-	comments, total, err := s.repo.ListMangaComments(ctx, mangaID, skip, limit)
+	comments, total, err := s.repo.ListMangaComments(ctx, mangaID, skip, limit, sortOrder)
 	if err != nil {
 		s.log.Error("list manga comments failed", map[string]interface{}{
 			"error":    err.Error(),

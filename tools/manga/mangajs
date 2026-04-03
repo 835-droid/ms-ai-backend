@@ -1,0 +1,13 @@
+// هذا الكود سيجلب أي رابط ينتهي بامتداد صورة أو يحتوي على كلمة wp-content
+(function() {
+    const images = Array.from(document.querySelectorAll('img'));
+    const urls = images.map(img => {
+        // فحص كل السمات الممكنة التي قد تحتوي على الرابط
+        return img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src') || img.getAttribute('data-full-url');
+    }).filter(src => src && (src.includes('wp-content') || src.includes('.jpg') || src.includes('.webp')));
+    
+    // إزالة التكرار وطباعة النتائج
+    const uniqueUrls = [...new Set(urls)];
+    console.log(uniqueUrls.join('\n'));
+    console.log("--- تم العثور على " + uniqueUrls.length + " صورة ---");
+})();

@@ -3,6 +3,7 @@ package manga
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,6 +21,26 @@ const (
 	ReactionSad       ReactionType = "sad"
 )
 
+// ReactionTypeFromString converts a string to a ReactionType
+func ReactionTypeFromString(s string) (ReactionType, error) {
+	switch s {
+	case "upvote":
+		return ReactionUpvote, nil
+	case "funny":
+		return ReactionFunny, nil
+	case "love":
+		return ReactionLove, nil
+	case "surprised":
+		return ReactionSurprised, nil
+	case "angry":
+		return ReactionAngry, nil
+	case "sad":
+		return ReactionSad, nil
+	default:
+		return "", fmt.Errorf("invalid reaction type: %s", s)
+	}
+}
+
 // Manga represents a manga in the system.
 type Manga struct {
 	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id"`
@@ -35,6 +56,7 @@ type Manga struct {
 	UpdatedAt      time.Time          `bson:"updated_at" json:"updated_at"`
 	ViewsCount     int64              `bson:"views_count" json:"views_count"`
 	LikesCount     int64              `bson:"likes_count" json:"likes_count"`
+	FavoritesCount int64              `bson:"favorites_count" json:"favorites_count"`
 	ReactionsCount map[string]int64   `bson:"reactions_count" json:"reactions_count"`
 	RatingSum      float64            `bson:"rating_sum" json:"rating_sum"`
 	RatingCount    int64              `bson:"rating_count" json:"rating_count"`
@@ -70,6 +92,7 @@ type MangaChapter struct {
 	AverageRating float64            `bson:"average_rating" json:"average_rating"`
 	CreatedAt     time.Time          `bson:"created_at" json:"created_at"`
 	UpdatedAt     time.Time          `bson:"updated_at" json:"updated_at"`
+	HasUserViewed *bool              `json:"has_user_viewed,omitempty"`
 }
 
 // UserFavorite represents a user's favorite manga.
@@ -86,6 +109,7 @@ type ChapterRating struct {
 	UserID    primitive.ObjectID `bson:"user_id" json:"user_id"`
 	Score     float64            `bson:"score" json:"score" validate:"min=1,max=10"`
 	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
 // MangaComment represents a comment on a manga.
@@ -111,6 +135,12 @@ type ChapterComment struct {
 	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
+// RankedManga represents a manga with its ranking information for a specific period.
+type RankedManga struct {
+	Manga     *Manga `json:"manga"`
+	ViewCount int64  `json:"view_count"`
+}
+
 // MangaRepository defines the manga data operations.
 type MangaRepository interface {
 	CreateManga(ctx context.Context, manga *Manga) error
@@ -120,6 +150,11 @@ type MangaRepository interface {
 	UpdateManga(ctx context.Context, manga *Manga) error
 	DeleteManga(ctx context.Context, id primitive.ObjectID) error
 	IncrementViews(ctx context.Context, mangaID primitive.ObjectID) error
+	LogView(ctx context.Context, mangaID primitive.ObjectID) error
+	ListMostViewed(ctx context.Context, since time.Time, skip, limit int64) ([]*RankedManga, error)
+	ListRecentlyUpdated(ctx context.Context, skip, limit int64) ([]*Manga, error)
+	ListMostFollowed(ctx context.Context, skip, limit int64) ([]*Manga, error)
+	ListTopRated(ctx context.Context, skip, limit int64) ([]*Manga, error)
 	SetReaction(ctx context.Context, mangaID, userID primitive.ObjectID, reactionType ReactionType) (reaction string, err error)
 	GetUserReaction(ctx context.Context, mangaID, userID primitive.ObjectID) (string, error)
 	ListLikedMangas(ctx context.Context, userID primitive.ObjectID, skip, limit int64) ([]*Manga, int64, error)
@@ -134,7 +169,7 @@ type MangaRepository interface {
 
 	// Manga Comments
 	AddMangaComment(ctx context.Context, comment *MangaComment) error
-	ListMangaComments(ctx context.Context, mangaID primitive.ObjectID, skip, limit int64) ([]*MangaComment, int64, error)
+	ListMangaComments(ctx context.Context, mangaID primitive.ObjectID, skip, limit int64, sortOrder string) ([]*MangaComment, int64, error)
 	DeleteMangaComment(ctx context.Context, commentID, userID primitive.ObjectID) error
 }
 
@@ -148,14 +183,18 @@ type MangaChapterRepository interface {
 
 	// Chapter Views
 	IncrementChapterViews(ctx context.Context, chapterID, mangaID primitive.ObjectID) error
+	TrackChapterView(ctx context.Context, chapterID, mangaID, userID primitive.ObjectID) error
+	HasUserViewedChapter(ctx context.Context, chapterID, userID primitive.ObjectID) (bool, error)
+	TrackAndIncrementChapterView(ctx context.Context, chapterID, mangaID, userID primitive.ObjectID) (bool, error)
 
 	// Chapter Ratings
-	AddChapterRating(ctx context.Context, rating *ChapterRating) (newAverage float64, err error)
+	AddChapterRating(ctx context.Context, rating *ChapterRating) (newAverage float64, count int64, userScore float64, err error)
 	HasUserRatedChapter(ctx context.Context, chapterID, userID primitive.ObjectID) (bool, error)
+	GetUserChapterRating(ctx context.Context, chapterID, userID primitive.ObjectID) (float64, bool, error)
 
 	// Chapter Comments
 	AddChapterComment(ctx context.Context, comment *ChapterComment) error
-	ListChapterComments(ctx context.Context, chapterID primitive.ObjectID, skip, limit int64) ([]*ChapterComment, int64, error)
+	ListChapterComments(ctx context.Context, chapterID primitive.ObjectID, skip, limit int64, sortOrder string) ([]*ChapterComment, int64, error)
 	DeleteChapterComment(ctx context.Context, commentID, userID primitive.ObjectID) error
 }
 

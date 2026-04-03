@@ -14,6 +14,10 @@ func SetupMangaRoutes(engine *gin.Engine, mangaHandler *manga.MangaHandler, chap
 	mangas := engine.Group("/api/mangas")
 	{
 		mangas.GET("", mangaHandler.ListMangas)
+		mangas.GET("/most-viewed", mangaHandler.ListMostViewed)
+		mangas.GET("/recently-updated", mangaHandler.ListRecentlyUpdated)
+		mangas.GET("/most-followed", mangaHandler.ListMostFollowed)
+		mangas.GET("/top-rated", mangaHandler.ListTopRated)
 		mangas.GET("/:mangaID", mangaHandler.GetManga)
 
 		writeLimit := middleware.RateLimitMiddlewareFromConfig(cfg, 0.25)
@@ -28,20 +32,26 @@ func SetupMangaRoutes(engine *gin.Engine, mangaHandler *manga.MangaHandler, chap
 			authGroup.DELETE("/:mangaID", mangaHandler.DeleteManga)
 		}
 
+		// View endpoint uses optional auth to allow anonymous visits for trending/most-viewed tracking
+		viewGroup := mangas.Group("")
+		{
+			viewGroup.Use(middleware.OptionalAuthMiddleware(cfg, userRepo))
+			viewGroup.Use(engagementLimit)
+			viewGroup.POST("/:mangaID/view", mangaHandler.IncrementViews)
+		}
+
 		engagementGroup := mangas.Group("")
 		{
 			engagementGroup.Use(middleware.AuthMiddleware(cfg, userRepo))
 			engagementGroup.Use(engagementLimit)
-			engagementGroup.GET("/favorites", mangaHandler.ListLikedMangas)
-			engagementGroup.POST("/:mangaID/view", mangaHandler.IncrementViews)
+			engagementGroup.GET("/favorites", mangaHandler.ListFavorites)
 			engagementGroup.POST("/:mangaID/react", mangaHandler.SetReaction)
 			engagementGroup.GET("/:mangaID/my-reaction", mangaHandler.GetUserReaction)
-			// engagementGroup.POST("/:mangaID/rate", mangaHandler.RateManga) // Disabled: rating moved to chapters only
+			engagementGroup.POST("/:mangaID/rate", mangaHandler.RateManga)
 			// New engagement routes
 			engagementGroup.POST("/:mangaID/favorite", mangaHandler.AddFavorite)
 			engagementGroup.DELETE("/:mangaID/favorite", mangaHandler.RemoveFavorite)
 			engagementGroup.GET("/:mangaID/favorite", mangaHandler.IsFavorite)
-			engagementGroup.GET("/favorites/list", mangaHandler.ListFavorites)
 			engagementGroup.POST("/:mangaID/comments", mangaHandler.AddMangaComment)
 			engagementGroup.GET("/:mangaID/comments", mangaHandler.ListMangaComments)
 			engagementGroup.DELETE("/:mangaID/comments/:comment_id", mangaHandler.DeleteMangaComment)
@@ -49,6 +59,7 @@ func SetupMangaRoutes(engine *gin.Engine, mangaHandler *manga.MangaHandler, chap
 
 		chapters := mangas.Group("/:mangaID/chapters")
 		{
+			chapters.Use(middleware.OptionalAuthMiddleware(cfg, userRepo))
 			readLimit := middleware.RateLimitMiddlewareFromConfig(cfg, 0.50)
 			chapters.Use(readLimit)
 			chapters.GET("", chapterHandler.ListChapters)
@@ -66,6 +77,14 @@ func SetupMangaRoutes(engine *gin.Engine, mangaHandler *manga.MangaHandler, chap
 				engagementGroup.DELETE("/:chapterID/comments/:comment_id", chapterHandler.DeleteChapterComment)
 			}
 
+			// Exempt my-rating from strict engagement throttle to avoid mass 429s during chapter list render
+			myRatingGroup := chapters.Group("")
+			{
+				myRatingGroup.Use(middleware.AuthMiddleware(cfg, userRepo))
+				myRatingGroup.GET("/:chapterID/my-rating", chapterHandler.GetUserChapterRating)
+			}
+
+			// Admin write operations (maintain parity with previous authorization behavior)
 			writeGroup := chapters.Group("")
 			{
 				writeGroup.Use(middleware.AuthMiddleware(cfg, userRepo))

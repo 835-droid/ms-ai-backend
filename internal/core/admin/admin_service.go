@@ -8,6 +8,7 @@ import (
 	"time"
 
 	corecommon "github.com/835-droid/ms-ai-backend/internal/core/common"
+	"github.com/835-droid/ms-ai-backend/internal/core/user"
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 	"github.com/835-droid/ms-ai-backend/pkg/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -35,7 +36,7 @@ func NewAdminService(userRepo coreuser.Repository, repo Repository, log *logger.
 
 // GetMetrics returns admin metrics
 func (s *DefaultAdminService) GetMetrics(ctx context.Context) map[string]interface{} {
-	users, _, userErr := s.userRepo.FindAllUsers(ctx, 0, 1)
+	_, totalUsers, userErr := s.userRepo.FindAllUsers(ctx, 0, 1)
 	_, inviteTotal, inviteErr := s.repo.ListInvites(ctx, 1, 1)
 
 	return map[string]interface{}{
@@ -44,7 +45,7 @@ func (s *DefaultAdminService) GetMetrics(ctx context.Context) map[string]interfa
 			if userErr != nil {
 				return -1
 			}
-			return int64(len(users))
+			return totalUsers
 		}(),
 		"total_invites": func() int64 {
 			if inviteErr != nil {
@@ -170,7 +171,7 @@ func (s *DefaultAdminService) PromoteToAdmin(ctx context.Context, userID string)
 	if err != nil {
 		return fmt.Errorf("invalid user id: %w", err)
 	}
-	return s.userRepo.UpdateUserRole(ctx, oid, "admin", true)
+	return s.userRepo.UpdateUserRole(ctx, oid, user.RoleAdmin, true)
 }
 
 func (s *DefaultAdminService) DeactivateUser(ctx context.Context, userID string) error {

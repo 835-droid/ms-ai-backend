@@ -21,6 +21,7 @@ var (
 	ErrInvalidInput       = errors.New("invalid input")
 	ErrPermissionDenied   = errors.New("permission denied")
 	ErrSlugExists         = errors.New("slug already exists")
+	ErrTooManyRequests    = errors.New("too many requests")
 	// Manga domain errors
 	ErrMangaExists          = errors.New("manga already exists")
 	ErrMangaNotFound        = errors.New("manga not found")
