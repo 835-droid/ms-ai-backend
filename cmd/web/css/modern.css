@@ -3,22 +3,8 @@
    تصميم عصري، دارك، مع تأثيرات زجاجية ونيون
    ========================================== */
 
-/* ----- متغيرات محسنة ----- */
+/* ----- متغيرات محسنة للـ Light Mode ----- */
 :root {
-    /* الألوان الأساسية - نيون دارك */
-    --primary: #8b5cf6;
-    --primary-dark: #6d28d9;
-    --primary-light: #a78bfa;
-    --primary-glow: rgba(139, 92, 246, 0.5);
-    --secondary: #10b981;
-    --secondary-dark: #059669;
-    --secondary-glow: rgba(16, 185, 129, 0.3);
-    --danger: #ef4444;
-    --danger-dark: #dc2626;
-    --warning: #f59e0b;
-    --info: #3b82f6;
-    
-    /* زوايا */
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 20px;

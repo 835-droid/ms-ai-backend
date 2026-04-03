@@ -20,8 +20,8 @@
 }
 
 body.dark-mode .navbar {
-    background: rgba(13, 17, 23, 0.95);
-    border-bottom-color: var(--border-light);
+    background: rgba(13, 17, 23, 0.95) !important;
+    border-bottom-color: var(--border-light) !important;
 }
 
 .navbar-brand {
