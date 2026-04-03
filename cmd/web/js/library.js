@@ -41,26 +41,6 @@ function renderMangas(mangas) {
                         <div class="manga-meta">
                             <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
                         </div>
-                        
-                        ${manga.reactions_count ? `
-                            <div class="manga-reactions-preview">
-                                ${Object.entries(manga.reactions_count)
-                                    .filter(([_, count]) => count > 0)
-                                    .sort((a, b) => b[1] - a[1])
-                                    .slice(0, 3)
-                                    .map(([type, count]) => {
-                                        const emojis = {
-                                            upvote: '👍',
-                                            funny: '😂',
-                                            love: '❤️',
-                                            surprised: '😮',
-                                            angry: '😡',
-                                            sad: '😢'
-                                        };
-                                        return `<div class="manga-reaction-badge"><span class="manga-reaction-emoji">${emojis[type] || '👍'}</span> ${formatCompactNumber(count)}</div>`;
-                                    }).join('')}
-                            </div>
-                        ` : ''}
                     </div>
                 </a>
             </article>

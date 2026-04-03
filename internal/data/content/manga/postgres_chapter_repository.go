@@ -316,8 +316,11 @@ func (r *PostgresMangaChapterRepository) AddChapterRating(ctx context.Context, r
 		return 0, 0, 0, fmt.Errorf("update chapter averages: %w", err)
 	}
 
-	// Recalculate manga average from all its chapters
+	// Recalculate manga aggregates from all its chapters
 	var mangaAverage float64
+	var mangaTotalCount int64
+	var mangaTotalSum float64
+
 	err = r.store.DB.GetContext(ctx, &mangaAverage,
 		`SELECT AVG(average_rating) FROM manga_chapters WHERE manga_id=$1 AND average_rating > 0`,
 		rating.MangaID.Hex())
@@ -325,11 +328,25 @@ func (r *PostgresMangaChapterRepository) AddChapterRating(ctx context.Context, r
 		mangaAverage = 0
 	}
 
-	_, err = r.store.DB.ExecContext(ctx,
-		`UPDATE mangas SET average_rating=$1 WHERE id=$2`,
-		mangaAverage, rating.MangaID.Hex())
+	err = r.store.DB.GetContext(ctx, &mangaTotalCount,
+		`SELECT COALESCE(SUM(rating_count), 0) FROM manga_chapters WHERE manga_id=$1`,
+		rating.MangaID.Hex())
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("update manga average: %w", err)
+		mangaTotalCount = 0
+	}
+
+	err = r.store.DB.GetContext(ctx, &mangaTotalSum,
+		`SELECT COALESCE(SUM(rating_sum), 0) FROM manga_chapters WHERE manga_id=$1`,
+		rating.MangaID.Hex())
+	if err != nil {
+		mangaTotalSum = 0
+	}
+
+	_, err = r.store.DB.ExecContext(ctx,
+		`UPDATE mangas SET average_rating=$1, rating_count=$2, rating_sum=$3 WHERE id=$4`,
+		mangaAverage, mangaTotalCount, mangaTotalSum, rating.MangaID.Hex())
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("update manga aggregates: %w", err)
 	}
 
 	return chapterAverage, int64(chapterCount), rating.Score, nil

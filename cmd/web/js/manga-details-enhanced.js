@@ -694,9 +694,6 @@ async function loadMangaDetailsPage() {
         updateReactionCounts();
         document.getElementById('manga-title-header').textContent = currentManga.title;
         document.getElementById('manga-subtitle').textContent = `${currentChapters.length} فصل | ${currentManga.tags?.length || 0} تصنيف`;
-
-        // Record view for trending/most-viewed tracking (after successful page load)
-        await recordMangaView(mangaId);
     } catch (error) {
         setError(document.getElementById('manga-details'), error.message);
     }

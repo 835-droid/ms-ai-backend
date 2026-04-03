@@ -322,7 +322,7 @@ func (r *MongoMangaChapterRepository) AddChapterRating(ctx context.Context, rati
 		}
 	}
 
-	// Recalculate manga average from all its chapters
+	// Recalculate manga aggregates from all its chapters
 	chapColl := r.store.GetCollection("manga_chapters")
 	cursor, err = chapColl.Find(ctx, bson.M{"manga_id": rating.MangaID})
 	if err != nil {
@@ -337,11 +337,16 @@ func (r *MongoMangaChapterRepository) AddChapterRating(ctx context.Context, rati
 
 	mangaAvgSum := 0.0
 	validChapters := 0
+	var mangaTotalCount int64
+	var mangaTotalSum float64
+
 	for _, ch := range chapters {
 		if ch.AverageRating > 0 {
 			mangaAvgSum += ch.AverageRating
 			validChapters++
 		}
+		mangaTotalCount += ch.RatingCount
+		mangaTotalSum += ch.RatingSum
 	}
 
 	if validChapters > 0 {
@@ -349,10 +354,27 @@ func (r *MongoMangaChapterRepository) AddChapterRating(ctx context.Context, rati
 		mangaColl := r.store.GetCollection("manga")
 		_, err = mangaColl.UpdateOne(ctx,
 			bson.M{"_id": rating.MangaID},
-			bson.M{"$set": bson.M{"average_rating": mangaAvg}},
+			bson.M{"$set": bson.M{
+				"average_rating": mangaAvg,
+				"rating_count":   mangaTotalCount,
+				"rating_sum":     mangaTotalSum,
+			}},
 		)
 		if err != nil {
-			return avgRating, 0, rating.Score, fmt.Errorf("update manga average: %w", err)
+			return avgRating, 0, rating.Score, fmt.Errorf("update manga aggregates: %w", err)
+		}
+	} else {
+		// Even if no chapters have ratings yet, update count and sum to ensure consistency
+		mangaColl := r.store.GetCollection("manga")
+		_, err = mangaColl.UpdateOne(ctx,
+			bson.M{"_id": rating.MangaID},
+			bson.M{"$set": bson.M{
+				"rating_count": mangaTotalCount,
+				"rating_sum":   mangaTotalSum,
+			}},
+		)
+		if err != nil {
+			return avgRating, 0, rating.Score, fmt.Errorf("update manga rating counts: %w", err)
 		}
 	}
 

@@ -299,43 +299,292 @@ func (r *HybridMangaRepository) LogView(ctx context.Context, mangaID primitive.O
 }
 
 func (r *HybridMangaRepository) ListMostViewed(ctx context.Context, since time.Time, skip, limit int64) ([]*coremanga.RankedManga, error) {
+	// Calculate fetch limit to ensure we have enough data for the requested page
+	// Add buffer for deduplication and merging
+	fetchLimit := skip + limit + 100
+	if fetchLimit < 500 {
+		fetchLimit = 500
+	}
+
+	rankedMap := make(map[string]*coremanga.RankedManga)
+	var primarySuccess, secondarySuccess bool
+
+	// Query primary repository
 	if r.primary != nil {
-		return r.primary.ListMostViewed(ctx, since, skip, limit)
+		ranked, err := r.primary.ListMostViewed(ctx, since, 0, fetchLimit)
+		if err == nil {
+			primarySuccess = true
+			for _, rm := range ranked {
+				rankedMap[rm.Manga.ID.Hex()] = &coremanga.RankedManga{
+					Manga:     rm.Manga,
+					ViewCount: rm.ViewCount,
+				}
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid primary list most viewed failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
+
+	// Query secondary repository and merge results
 	if r.secondary != nil {
-		return r.secondary.ListMostViewed(ctx, since, skip, limit)
+		ranked, err := r.secondary.ListMostViewed(ctx, since, 0, fetchLimit)
+		if err == nil {
+			secondarySuccess = true
+			for _, rm := range ranked {
+				idStr := rm.Manga.ID.Hex()
+				if existing, exists := rankedMap[idStr]; exists {
+					// Merge view counts from both backends for the same manga
+					existing.ViewCount += rm.ViewCount
+				} else {
+					rankedMap[idStr] = &coremanga.RankedManga{
+						Manga:     rm.Manga,
+						ViewCount: rm.ViewCount,
+					}
+				}
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid secondary list most viewed failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
-	return nil, errors.New("no backend available for list most viewed")
+
+	// Only error if no repositories are available at all
+	if !primarySuccess && !secondarySuccess {
+		return nil, errors.New("no repositories available or all failed for list most viewed")
+	}
+
+	// Convert map to slice and sort by view count descending
+	result := make([]*coremanga.RankedManga, 0, len(rankedMap))
+	for _, rm := range rankedMap {
+		result = append(result, rm)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ViewCount > result[j].ViewCount
+	})
+
+	// Apply pagination after sorting
+	total := int64(len(result))
+	start := skip
+	end := skip + limit
+
+	if start >= total {
+		return []*coremanga.RankedManga{}, nil
+	}
+	if end > total {
+		end = total
+	}
+
+	return result[start:end], nil
 }
 
 func (r *HybridMangaRepository) ListRecentlyUpdated(ctx context.Context, skip, limit int64) ([]*coremanga.Manga, error) {
+	// Calculate fetch limit to ensure we have enough data for the requested page
+	// Add buffer for deduplication
+	fetchLimit := skip + limit + 100
+	if fetchLimit < 500 {
+		fetchLimit = 500
+	}
+
+	mangaMap := make(map[string]*coremanga.Manga)
+	var primarySuccess, secondarySuccess bool
+
+	// Query primary repository
 	if r.primary != nil {
-		return r.primary.ListRecentlyUpdated(ctx, skip, limit)
+		mangas, err := r.primary.ListRecentlyUpdated(ctx, 0, fetchLimit)
+		if err == nil {
+			primarySuccess = true
+			for _, manga := range mangas {
+				mangaMap[manga.ID.Hex()] = manga
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid primary list recently updated failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
+
+	// Query secondary repository and merge unique items
 	if r.secondary != nil {
-		return r.secondary.ListRecentlyUpdated(ctx, skip, limit)
+		mangas, err := r.secondary.ListRecentlyUpdated(ctx, 0, fetchLimit)
+		if err == nil {
+			secondarySuccess = true
+			for _, manga := range mangas {
+				if _, exists := mangaMap[manga.ID.Hex()]; !exists {
+					mangaMap[manga.ID.Hex()] = manga
+				}
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid secondary list recently updated failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
-	return nil, errors.New("no backend available for list recently updated")
+
+	// Only error if no repositories are available at all
+	if !primarySuccess && !secondarySuccess {
+		return nil, errors.New("no repositories available or all failed for list recently updated")
+	}
+
+	// Convert map to slice and sort by updated_at DESC
+	result := make([]*coremanga.Manga, 0, len(mangaMap))
+	for _, manga := range mangaMap {
+		result = append(result, manga)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].UpdatedAt.After(result[j].UpdatedAt)
+	})
+
+	// Apply pagination after sorting
+	total := int64(len(result))
+	start := skip
+	end := skip + limit
+
+	if start >= total {
+		return []*coremanga.Manga{}, nil
+	}
+	if end > total {
+		end = total
+	}
+
+	return result[start:end], nil
 }
 
 func (r *HybridMangaRepository) ListMostFollowed(ctx context.Context, skip, limit int64) ([]*coremanga.Manga, error) {
+	// Calculate fetch limit to ensure we have enough data for the requested page
+	// Add buffer for deduplication
+	fetchLimit := skip + limit + 100
+	if fetchLimit < 500 {
+		fetchLimit = 500
+	}
+
+	mangaMap := make(map[string]*coremanga.Manga)
+	var primarySuccess, secondarySuccess bool
+
+	// Query primary repository
 	if r.primary != nil {
-		return r.primary.ListMostFollowed(ctx, skip, limit)
+		mangas, err := r.primary.ListMostFollowed(ctx, 0, fetchLimit)
+		if err == nil {
+			primarySuccess = true
+			for _, manga := range mangas {
+				mangaMap[manga.ID.Hex()] = manga
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid primary list most followed failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
+
+	// Query secondary repository and merge unique items
 	if r.secondary != nil {
-		return r.secondary.ListMostFollowed(ctx, skip, limit)
+		mangas, err := r.secondary.ListMostFollowed(ctx, 0, fetchLimit)
+		if err == nil {
+			secondarySuccess = true
+			for _, manga := range mangas {
+				if _, exists := mangaMap[manga.ID.Hex()]; !exists {
+					mangaMap[manga.ID.Hex()] = manga
+				}
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid secondary list most followed failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
-	return nil, errors.New("no backend available for list most followed")
+
+	// Only error if no repositories are available at all
+	if !primarySuccess && !secondarySuccess {
+		return nil, errors.New("no repositories available or all failed for list most followed")
+	}
+
+	// Convert map to slice and sort by favorites_count DESC
+	result := make([]*coremanga.Manga, 0, len(mangaMap))
+	for _, manga := range mangaMap {
+		result = append(result, manga)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].FavoritesCount > result[j].FavoritesCount
+	})
+
+	// Apply pagination after sorting
+	total := int64(len(result))
+	start := skip
+	end := skip + limit
+
+	if start >= total {
+		return []*coremanga.Manga{}, nil
+	}
+	if end > total {
+		end = total
+	}
+
+	return result[start:end], nil
 }
 
 func (r *HybridMangaRepository) ListTopRated(ctx context.Context, skip, limit int64) ([]*coremanga.Manga, error) {
+	// Calculate fetch limit to ensure we have enough data for the requested page
+	// Add buffer for deduplication
+	fetchLimit := skip + limit + 100
+	if fetchLimit < 500 {
+		fetchLimit = 500
+	}
+
+	mangaMap := make(map[string]*coremanga.Manga)
+	var primarySuccess, secondarySuccess bool
+
+	// Query primary repository
 	if r.primary != nil {
-		return r.primary.ListTopRated(ctx, skip, limit)
+		mangas, err := r.primary.ListTopRated(ctx, 0, fetchLimit)
+		if err == nil {
+			primarySuccess = true
+			for _, manga := range mangas {
+				mangaMap[manga.ID.Hex()] = manga
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid primary list top rated failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
+
+	// Query secondary repository and merge unique items
 	if r.secondary != nil {
-		return r.secondary.ListTopRated(ctx, skip, limit)
+		mangas, err := r.secondary.ListTopRated(ctx, 0, fetchLimit)
+		if err == nil {
+			secondarySuccess = true
+			for _, manga := range mangas {
+				if _, exists := mangaMap[manga.ID.Hex()]; !exists {
+					mangaMap[manga.ID.Hex()] = manga
+				}
+			}
+		} else if r.log != nil {
+			r.log.Error("hybrid secondary list top rated failed", map[string]interface{}{"error": err.Error()})
+		}
 	}
-	return nil, errors.New("no backend available for list top rated")
+
+	// Only error if no repositories are available at all
+	if !primarySuccess && !secondarySuccess {
+		return nil, errors.New("no repositories available or all failed for list top rated")
+	}
+
+	// Convert map to slice and sort by average_rating DESC, then rating_count DESC
+	result := make([]*coremanga.Manga, 0, len(mangaMap))
+	for _, manga := range mangaMap {
+		result = append(result, manga)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].AverageRating != result[j].AverageRating {
+			return result[i].AverageRating > result[j].AverageRating
+		}
+		return result[i].RatingCount > result[j].RatingCount
+	})
+
+	// Apply pagination after sorting
+	total := int64(len(result))
+	start := skip
+	end := skip + limit
+
+	if start >= total {
+		return []*coremanga.Manga{}, nil
+	}
+	if end > total {
+		end = total
+	}
+
+	return result[start:end], nil
 }
 
 func (r *HybridMangaRepository) SetReaction(ctx context.Context, mangaID, userID primitive.ObjectID, reactionType coremanga.ReactionType) (string, error) {
