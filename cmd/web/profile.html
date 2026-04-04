@@ -16,8 +16,8 @@
     <nav class="navbar">
         <a href="dashboard.html" class="navbar-brand"><i class="fas fa-book"></i> MS-AI</a>
         <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
-        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li><li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li><li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li><li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li></ul>
-        <div class="navbar-right"><button class="dark-mode-toggle"></button><button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button><div class="navbar-user-badge"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></div></div>
+        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li><li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li><li><a href="history.html"><i class="fas fa-history"></i> السجل</a></li><li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li></ul>
+        <div class="navbar-right"><button class="dark-mode-toggle"></button><button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button><a href="profile.html" class="navbar-user-badge" title="الملف الشخصي"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></a></div>
     </nav>
 
     <main class="page-shell">
@@ -54,6 +54,14 @@
                 <h2>الروابط السريعة</h2>
                 <a href="favorites.html" class="btn btn-secondary" style="margin-right:0.25rem;">عرض المفضلة</a>
                 <a href="library.html" class="btn btn-secondary">عرض المكتبة</a>
+            </section>
+
+            <section class="section-card" style="margin-top:1rem; border-color: var(--danger);">
+                <h2 style="color: var(--danger);">منطقة الخطر</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">الإجراءات التالية لا يمكن التراجع عنها</p>
+                <button id="delete-account-btn" class="btn btn-danger">
+                    <i class="fas fa-user-times"></i> حذف الحساب
+                </button>
             </section>
         </section>
     </main>

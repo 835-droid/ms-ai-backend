@@ -24,16 +24,20 @@ type Container struct {
 }
 
 type RepoBundle struct {
-	User         coreuser.Repository
-	Manga        coremanga.MangaRepository
-	MangaChapter coremanga.MangaChapterRepository
+	User           coreuser.Repository
+	Manga          coremanga.MangaRepository
+	FavList        coremanga.FavoriteListRepository
+	MangaChapter   coremanga.MangaChapterRepository
+	ViewingHistory coremanga.ViewingHistoryRepository
 }
 
 type serviceBundle struct {
-	Auth    coreauth.AuthService
-	Admin   coreadmin.Service
-	Manga   coremanga.MangaService
-	Chapter coremanga.MangaChapterService
+	Auth           coreauth.AuthService
+	Admin          coreadmin.Service
+	Manga          coremanga.MangaService
+	FavList        coremanga.FavoriteListService
+	Chapter        coremanga.MangaChapterService
+	ViewingHistory coremanga.ViewingHistoryService
 }
 
 // ----- END OF FILE: backend/MS-AI/internal/container/types.go -----

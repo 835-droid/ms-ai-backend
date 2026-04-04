@@ -33,8 +33,8 @@ func NewHealthHandler(m *mongoinfra.MongoStore, p *pginfra.PostgresStore) *healt
 	return health.NewHandler(m, p)
 }
 
-func NewMangaHandler(s coremanga.MangaService) *manga.MangaHandler {
-	return manga.NewMangaHandler(s)
+func NewMangaHandler(s coremanga.MangaService, favListService coremanga.FavoriteListService) *manga.MangaHandler {
+	return manga.NewMangaHandler(s, favListService)
 }
 
 func NewMangaChapterHandler(s coremanga.MangaChapterService) *manga.MangaChapterHandler {

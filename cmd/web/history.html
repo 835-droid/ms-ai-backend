@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-AI | سجل المشاهدة</title>
+    <link rel="stylesheet" href="css/base.css?v=20260403-dark">
+    <link rel="stylesheet" href="css/modern.css?v=20260403-dark">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/manga.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .history-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid var(--border-light);
+        }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-light);
+            transition: all var(--transition-base);
+        }
+
+        .history-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .history-cover {
+            width: 60px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: var(--radius-md);
+            flex-shrink: 0;
+        }
+
+        .history-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .history-title a:hover {
+            color: var(--primary);
+        }
+
+        .history-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .history-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-base);
+        }
+
+        .btn-icon:hover {
+            color: var(--danger);
+            background: var(--bg-tertiary);
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .history-empty i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .history-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .chapter-badge {
+            display: inline-block;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 0.125rem 0.5rem;
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-light);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+
+        .pagination button:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .history-item {
+                flex-wrap: wrap;
+            }
+            
+            .history-actions {
+                width: 100%;
+                justify-content: flex-end;
+                margin-top: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="navbar-brand"><i class="fas fa-home"></i> MS-AI</a>
+        <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
+        <ul class="navbar-menu">
+            <li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li>
+            <li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li>
+            <li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li>
+            <li><a href="history.html"><i class="fas fa-history"></i> السجل</a></li>
+            <li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li>
+        </ul>
+        <div class="navbar-right">
+            <button class="dark-mode-toggle"></button>
+            <button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
+            <a href="profile.html" class="navbar-user-badge" title="الملف الشخصي">
+                <span id="user-display-name">مستخدم</span>
+                <div class="navbar-user-avatar">US</div>
+            </a>
+        </div>
+    </nav>
+
+    <main class="page-shell">
+        <div class="dashboard-container">
+            <div class="page-header" style="margin-bottom: 2rem;">
+                <div>
+                    <h1><i class="fas fa-history"></i> سجل المشاهدة</h1>
+                    <p>تتبع جميع المانجا التي شاهدتها</p>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="history-stats" id="history-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">مانجا مشاهدة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-chapters">0</div>
+                    <div class="stat-label">فصول مقروءة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-recent">0</div>
+                    <div class="stat-label">مشاهدات حديثة</div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div>
+                    <span id="history-count" style="color: var(--text-secondary);"></span>
+                </div>
+                <div class="toolbar-actions">
+                    <button class="btn btn-sm btn-secondary" id="btn-clean-old" title="حذف السجل القديم">
+                        <i class="fas fa-trash"></i> تنظيف السجل القديم
+                    </button>
+                </div>
+            </div>
+
+            <!-- History List -->
+            <div id="history-container">
+                <div class="history-list" id="history-list">
+                    <!-- History items will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="history-empty" class="history-empty" style="display: none;">
+                <i class="fas fa-history"></i>
+                <h3>لا يوجد سجل مشاهدات بعد</h3>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">ابدأ بقراءة المانجا وسيظهر سجل المشاهدة هنا</p>
+                <a href="library.html" class="btn btn-primary" style="margin-top: 1rem;">تصفح المكتبة</a>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination">
+                <!-- Pagination will be populated by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <script src="js/config.js?v=20260401"></script>
+    <script src="js/auth.js?v=20260401"></script>
+    <script src="js/api.js?v=20260401"></script>
+    <script src="js/toast.js?v=20260401"></script>
+    <script src="js/common.js?v=20260401"></script>
+    <script src="js/history.js?v=20260401"></script>
+</body>
+</html>

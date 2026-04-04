@@ -105,6 +105,62 @@ function getUserRolesFromToken() {
     return user?.roles || [];
 }
 
+// ========== Read More / Truncate Text ==========
+const TRUNCATE_THRESHOLD = 120; // characters
+
+function truncateText(text, maxLength = TRUNCATE_THRESHOLD) {
+    if (!text || text.length <= maxLength) return { truncated: false, short: text, full: text };
+    return {
+        truncated: true,
+        short: text.substring(0, maxLength).trim() + '...',
+        full: text
+    };
+}
+
+function createDescriptionHTML(description, containerClass = '') {
+    if (!description) return '<p class="manga-description">لا يوجد وصف</p>';
+    
+    const result = truncateText(description);
+    if (!result.truncated) {
+        return `<p class="manga-description">${escapeHtml(description)}</p>`;
+    }
+    
+    const id = 'desc-' + Math.random().toString(36).substr(2, 9);
+    return `
+        <div class="description-container collapsed ${containerClass}" id="${id}-container">
+            <p class="manga-description truncate-text collapsed" id="${id}-text">${escapeHtml(result.short)}</p>
+            <p class="manga-description truncate-text" id="${id}-full" style="display:none;">${escapeHtml(result.full)}</p>
+            <button class="read-more-btn" onclick="toggleReadMore('${id}')" id="${id}-btn">عرض المزيد</button>
+        </div>
+    `;
+}
+
+function toggleReadMore(id) {
+    const container = document.getElementById(id + '-container');
+    const shortText = document.getElementById(id + '-text');
+    const fullText = document.getElementById(id + '-full');
+    const btn = document.getElementById(id + '-btn');
+    
+    if (!container || !shortText || !fullText || !btn) return;
+    
+    const isCollapsed = container.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        container.classList.remove('collapsed');
+        shortText.style.display = 'none';
+        fullText.style.display = 'block';
+        btn.textContent = 'عرض الأقل';
+    } else {
+        container.classList.add('collapsed');
+        shortText.style.display = 'block';
+        fullText.style.display = 'none';
+        btn.textContent = 'عرض المزيد';
+    }
+}
+
+// Make toggleReadMore globally available
+window.toggleReadMore = toggleReadMore;
+
 function isAdminFromToken() {
     const roles = getUserRolesFromToken();
     return roles.includes('admin');
@@ -234,6 +290,11 @@ function initNavbar() {
         if (avatar) {
             avatar.textContent = initials;
         }
+        // Update display name if span exists
+        const nameSpan = userBadge.querySelector('#user-display-name');
+        if (nameSpan) {
+            nameSpan.textContent = displayName;
+        }
     }
     
     // Mobile menu toggle (if implemented)
@@ -243,6 +304,43 @@ function initNavbar() {
         toggle.addEventListener('click', () => {
             menu.classList.toggle('active');
         });
+    }
+    
+    // Delete account button
+    const deleteBtn = document.getElementById('delete-account-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', handleDeleteAccount);
+    }
+}
+
+// ========== Delete Account Handler ==========
+async function handleDeleteAccount() {
+    // Confirm deletion
+    const confirmed = confirm('هل أنت متأكد من حذف حسابك؟ هذا الإجراء لا يمكن التراجع عنه.');
+    if (!confirmed) return;
+    
+    // Double confirm for important action
+    const doubleConfirm = confirm('تحذير: سيتم حذف جميع بياناتك بشكل نهائي. هل تريد المتابعة؟');
+    if (!doubleConfirm) return;
+    
+    try {
+        // Call delete account API
+        await apiFetch('/user/delete-account', {
+            method: 'DELETE'
+        });
+        
+        // Clear local storage and redirect
+        clearTokens();
+        localStorage.clear();
+        
+        // Show success message
+        alert('تم حذف حسابك بنجاح');
+        
+        // Redirect to login page
+        window.location.href = 'index.html';
+    } catch (error) {
+        console.error('Delete account error:', error);
+        alert('حدث خطأ أثناء حذف الحساب: ' + (error.message || 'يرجى المحاولة لاحقاً'));
     }
 }
 

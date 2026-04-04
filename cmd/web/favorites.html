@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MS-AI | المفضلة</title>
+    <title>MS-AI | قوائم المفضلة</title>
     <link rel="stylesheet" href="css/base.css?v=20260403-dark" />
     <link rel="stylesheet" href="css/modern.css?v=20260403-dark" />
     <link rel="stylesheet" href="css/layout.css" />
@@ -11,31 +11,429 @@
     <link rel="stylesheet" href="css/manga.css" />
     <link rel="stylesheet" href="css/animations.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .favorites-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            min-height: calc(100vh - 120px);
+        }
+
+        .lists-sidebar {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .list-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+        }
+
+        .btn-add-list {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .btn-add-list:hover {
+            background: var(--primary-dark);
+        }
+
+        .lists-container {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 0.5rem;
+        }
+
+        .list-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .list-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .list-item-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .list-item-icon {
+            font-size: 1.1rem;
+        }
+
+        .list-item-name {
+            font-weight: 500;
+        }
+
+        .list-item-count {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+        }
+
+        .list-item-actions {
+            display: none;
+            gap: 0.25rem;
+        }
+
+        .list-item:hover .list-item-actions {
+            display: flex;
+        }
+
+        .btn-list-action {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: var(--radius);
+            transition: all 0.2s;
+        }
+
+        .btn-list-action:hover {
+            color: var(--primary);
+            background: var(--hover-bg);
+        }
+
+        .btn-list-action.delete:hover {
+            color: var(--danger);
+        }
+
+        .manga-content {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .content-header h2 {
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .content-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .manga-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .manga-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .manga-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .manga-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .manga-card-info {
+            padding: 0.75rem;
+        }
+
+        .manga-card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 0.5rem 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .manga-card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-remove-manga {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0.25rem;
+            transition: transform 0.2s;
+        }
+
+        .btn-remove-manga:hover {
+            transform: scale(1.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        @media (max-width: 768px) {
+            .favorites-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .lists-sidebar {
+                order: -1;
+            }
+
+            .lists-container {
+                display: flex;
+                overflow-x: auto;
+                gap: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+
+            .list-item {
+                flex-shrink: 0;
+                margin-bottom: 0;
+            }
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <a href="dashboard.html" class="navbar-brand"><i class="fas fa-book"></i> MS-AI</a>
         <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
-        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li><li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li><li><a href="profile.html"><i class="fas fa-user"></i> الملف الشخصي</a></li><li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li></ul>
-        <div class="navbar-right"><button class="dark-mode-toggle"></button><button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button><div class="navbar-user-badge"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></div></div>
+        <ul class="navbar-menu"><li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li><li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li><li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li><li><a href="history.html"><i class="fas fa-history"></i> السجل</a></li><li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li></ul>
+        <div class="navbar-right"><button class="dark-mode-toggle"></button><button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button><a href="profile.html" class="navbar-user-badge" title="الملف الشخصي"><span id="user-display-name">مستخدم</span><div class="navbar-user-avatar">US</div></a></div>
     </nav>
 
     <main class="page-shell">
         <section class="page-card">
             <div class="page-header">
                 <div>
-                    <h1>المفضلة</h1>
-                    <p>المانجا التي أعجبتك.</p>
+                    <h1>قوائم المفضلة</h1>
+                    <p>نظّم المانجا المفضلة لديك في قوائم مخصصة.</p>
                 </div>
             </div>
 
-            <div class="toolbar">
-                <input id="favorites-search" type="search" placeholder="بحث في المفضلة..." />
+            <div class="favorites-layout">
+                <!-- Sidebar for lists -->
+                <aside class="lists-sidebar">
+                    <div class="list-header">
+                        <h2>قوائمي</h2>
+                        <button class="btn-add-list" id="btn-add-list" title="إنشاء قائمة جديدة">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <ul class="lists-container" id="lists-container">
+                        <!-- Lists will be populated by JavaScript -->
+                    </ul>
+                </aside>
+
+                <!-- Main content area -->
+                <div class="manga-content">
+                    <div class="content-header">
+                        <h2 id="current-list-title">جميع القوائم</h2>
+                        <div class="content-actions">
+                            <button class="btn btn-sm btn-secondary" id="btn-edit-list" style="display: none;">
+                                <i class="fas fa-edit"></i> تعديل
+                            </button>
+                            <button class="btn btn-sm btn-danger" id="btn-delete-list" style="display: none;">
+                                <i class="fas fa-trash"></i> حذف
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="manga-grid" class="manga-grid">
+                        <!-- Manga cards will be populated by JavaScript -->
+                    </div>
+
+                    <div id="empty-state" class="empty-state" style="display: none;">
+                        <i class="fas fa-heart"></i>
+                        <p>لا توجد مانجا في هذه القائمة بعد.</p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">تصفح المانجا وأضفها إلى قائمتك المفضلة!</p>
+                    </div>
+                </div>
             </div>
-            <div id="favorites-grid" class="manga-grid"></div>
-            <div id="favorites-empty" class="empty-state" style="display:none;">لا توجد عناصر في المفضلة بعد.</div>
         </section>
     </main>
+
+    <!-- Modal for creating/editing list -->
+    <div class="modal-overlay" id="list-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modal-title">إنشاء قائمة جديدة</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="list-name">اسم القائمة *</label>
+                    <input type="text" id="list-name" placeholder="مثال: أقرأها حالياً" required>
+                </div>
+                <div class="form-group">
+                    <label for="list-description">الوصف (اختياري)</label>
+                    <textarea id="list-description" placeholder="وصف القائمة..."></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="list-public">
+                        <label for="list-public">قائمة عامة (يمكن للآخرين رؤيتها)</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">إلغاء</button>
+                <button class="btn btn-primary" id="modal-save">حفظ</button>
+            </div>
+        </div>
+    </div>
 
     <script src="js/config.js?v=20260402"></script>
     <script src="js/auth.js?v=20260402"></script>

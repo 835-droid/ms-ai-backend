@@ -122,8 +122,11 @@ body.dark-mode .manga-info {
     display: flex;
     gap: 1rem;
     overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 1rem;
     scrollbar-width: thin;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
 }
 
 .horizontal-scroll::-webkit-scrollbar {
@@ -147,6 +150,23 @@ body.dark-mode .manga-info {
 .horizontal-card {
     min-width: 280px;
     max-width: 280px;
+    flex-shrink: 0;
+}
+
+/* Ensure manga-grid sections also use horizontal scroll on dashboard */
+#trending.horizontal-scroll,
+#most-followed.horizontal-scroll,
+#top-rated.horizontal-scroll {
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+#trending.horizontal-scroll .manga-card,
+#most-followed.horizontal-scroll .manga-card,
+#top-rated.horizontal-scroll .manga-card {
+    min-width: 280px;
+    max-width: 280px;
+    flex-shrink: 0;
 }
 
 .trending-tabs {
@@ -273,4 +293,50 @@ body.dark-mode .rating-badge {
 body.dark-mode .empty-state-card {
     background: rgba(15, 22, 41, 0.5) !important;
     border-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+/* ========== Read More / Truncate Text ========== */
+.truncate-text {
+    position: relative;
+}
+
+.truncate-text.collapsed {
+    max-height: 4.5em; /* approximately 3 lines */
+    overflow: hidden;
+}
+
+.read-more-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0;
+    margin-top: 0.25rem;
+    transition: color var(--transition-base);
+}
+
+.read-more-btn:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.description-container {
+    position: relative;
+}
+
+.description-container.collapsed::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2em;
+    background: linear-gradient(transparent, var(--bg-primary));
+    pointer-events: none;
+}
+
+body.dark-mode .description-container.collapsed::after {
+    background: linear-gradient(transparent, #0f1629);
 }

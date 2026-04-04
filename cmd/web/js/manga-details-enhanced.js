@@ -513,6 +513,9 @@ async function renderMangaDetails() {
                     <button id="favorite-btn" class="btn ${initialFavState ? 'btn-primary' : 'btn-secondary'}">
                         <i class="fas fa-bookmark"></i> ${initialFavState ? 'مضافة للمفضلة' : 'إضافة للمفضلة'}
                     </button>
+                    <button id="add-to-list-btn" class="btn btn-secondary" onclick="openAddToListModal()">
+                        <i class="fas fa-list"></i> إضافة لقائمة
+                    </button>
                     ${firstChapterId ? `<a href="${webPagePath('manga-reader.html')}?mangaId=${mangaId}&chapterId=${firstChapterId}" class="btn btn-secondary"><i class="fas fa-eye"></i> أول فصل</a>` : ''}
                     ${latestChapterId ? `<a href="${webPagePath('manga-reader.html')}?mangaId=${mangaId}&chapterId=${latestChapterId}" class="btn btn-secondary"><i class="fas fa-clock"></i> أحدث فصل</a>` : ''}
                 </div>
@@ -1335,10 +1338,165 @@ function updateReactionCounts() {
     });
 }
 
+// ========== إدارة القوائم المخصصة ==========
 
+// فتح مودال اختيار القوائم
+async function openAddToListModal() {
+    const mangaId = getCurrentMangaId();
+    if (!mangaId) {
+        showToast('تعذر تحديد المانجا', 'error');
+        return;
+    }
 
+    try {
+        // جلب قوائم المستخدم
+        const response = await apiFetch('/api/mangas/lists');
+        const lists = response.data || [];
 
+        // جلب القوائم التي تحتوي على هذه المانجا بالفعل
+        const listsResponse = await apiFetch(`/api/mangas/${encodeURIComponent(mangaId)}/lists`);
+        const existingLists = listsResponse.data || [];
+        const existingListIds = existingLists.map(l => l.id);
 
+        // إنشاء محتوى المودال
+        const modalContent = `
+            <div class="modal-overlay active" id="add-to-list-modal">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>إضافة إلى قائمة</h3>
+                        <button class="modal-close" onclick="closeAddToListModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>اختر قائمة:</label>
+                            <div class="lists-select">
+                                ${lists.length === 0 ? '<p class="no-lists">ليس لديك قوائم بعد. أنشئ قائمة جديدة من صفحة المفضلة.</p>' : ''}
+                                ${lists.map(list => `
+                                    <label class="list-checkbox">
+                                        <input type="checkbox" value="${list.id}" ${existingListIds.includes(list.id) ? 'checked' : ''}>
+                                        <span>${list.name}</span>
+                                        <small>${list.is_public ? 'عام' : 'خاص'}</small>
+                                    </label>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <a href="favorites.html" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-plus"></i> إنشاء قائمة جديدة
+                            </a>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeAddToListModal()">إلغاء</button>
+                        <button class="btn btn-primary" onclick="saveToLists()">حفظ</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // إضافة المودال للصفحة
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = modalContent;
+        document.body.appendChild(tempDiv.firstElementChild);
+
+        // إضافة ستايل للمودال
+        if (!document.getElementById('add-to-list-styles')) {
+            const style = document.createElement('style');
+            style.id = 'add-to-list-styles';
+            style.textContent = `
+                #add-to-list-modal .lists-select {
+                    max-height: 300px;
+                    overflow-y: auto;
+                    border: 1px solid var(--border-color);
+                    border-radius: var(--radius);
+                    padding: 0.5rem;
+                }
+                #add-to-list-modal .list-checkbox {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.5rem;
+                    border-radius: var(--radius);
+                    cursor: pointer;
+                    transition: background 0.2s;
+                }
+                #add-to-list-modal .list-checkbox:hover {
+                    background: var(--hover-bg);
+                }
+                #add-to-list-modal .list-checkbox input {
+                    width: auto;
+                }
+                #add-to-list-modal .list-checkbox small {
+                    margin-right: auto;
+                    color: var(--text-secondary);
+                    font-size: 0.85rem;
+                }
+                #add-to-list-modal .no-lists {
+                    color: var(--text-secondary);
+                    font-size: 0.9rem;
+                    padding: 1rem;
+                    text-align: center;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    } catch (error) {
+        console.error('Error opening add to list modal:', error);
+        showToast('فشل تحميل القوائم', 'error');
+    }
+}
+
+// إغلاق مودال إضافة للقائمة
+function closeAddToListModal() {
+    const modal = document.getElementById('add-to-list-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// حفظ القوائم المحددة
+async function saveToLists() {
+    const mangaId = getCurrentMangaId();
+    if (!mangaId) return;
+
+    const modal = document.getElementById('add-to-list-modal');
+    if (!modal) return;
+
+    const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedListIds = Array.from(checkboxes).map(cb => cb.value);
+
+    try {
+        // إزالة المانجا من جميع القوائم أولاً
+        const listsResponse = await apiFetch(`/api/mangas/${encodeURIComponent(mangaId)}/lists`);
+        const existingLists = listsResponse.data || [];
+
+        for (const list of existingLists) {
+            if (!selectedListIds.includes(list.id)) {
+                await apiFetch(`/api/mangas/lists/${list.id}/items/${mangaId}`, { method: 'DELETE' });
+            }
+        }
+
+        // إضافة المانجا إلى القوائم المحددة
+        for (const listId of selectedListIds) {
+            await apiFetch(`/api/mangas/lists/${listId}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ manga_id: mangaId })
+            });
+        }
+
+        showToast('تم تحديث القوائم بنجاح', 'success');
+        closeAddToListModal();
+    } catch (error) {
+        console.error('Error saving to lists:', error);
+        showToast('فشل حفظ القوائم', 'error');
+    }
+}
+
+// جعل الدوال متاحة عالمياً
+window.openAddToListModal = openAddToListModal;
+window.closeAddToListModal = closeAddToListModal;
+window.saveToLists = saveToLists;
 
 
 

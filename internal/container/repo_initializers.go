@@ -83,9 +83,23 @@ func initializeRepositories(cfg *config.Config, log *logger.Logger, m *mongoinfr
 		}
 	}
 
+	// Favorite List repository - Postgres only
+	var favListRepo coremanga.FavoriteListRepository
+	if p != nil {
+		favListRepo = mangarepo.NewPostgresFavoriteListRepository(p)
+	}
+
+	// Viewing History repository - MongoDB only
+	var viewingHistoryRepo coremanga.ViewingHistoryRepository
+	if m != nil {
+		viewingHistoryRepo = mangarepo.NewMongoViewingHistoryRepository(m, log)
+	}
+
 	return &RepoBundle{
-		User:         uRepo,
-		Manga:        mangaRepo,
-		MangaChapter: chapterRepo,
+		User:           uRepo,
+		Manga:          mangaRepo,
+		FavList:        favListRepo,
+		MangaChapter:   chapterRepo,
+		ViewingHistory: viewingHistoryRepo,
 	}
 }

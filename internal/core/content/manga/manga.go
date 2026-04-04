@@ -149,6 +149,41 @@ type ChapterCommentReaction struct {
 	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
 }
 
+// ReadingProgress represents a user's reading progress for a manga
+type ReadingProgress struct {
+	ID              primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	MangaID         primitive.ObjectID `bson:"manga_id" json:"manga_id"`
+	UserID          primitive.ObjectID `bson:"user_id" json:"user_id"`
+	LastReadChapter primitive.ObjectID `bson:"last_read_chapter" json:"last_read_chapter"`
+	LastReadPage    int                `bson:"last_read_page" json:"last_read_page"`
+	LastReadAt      time.Time          `bson:"last_read_at" json:"last_read_at"`
+	CreatedAt       time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt       time.Time          `bson:"updated_at" json:"updated_at"`
+}
+
+// FavoriteList represents a custom favorite list created by a user
+type FavoriteList struct {
+	ID          string    `json:"id"`
+	UserID      string    `json:"user_id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description,omitempty"`
+	IsPublic    bool      `json:"is_public"`
+	SortOrder   int       `json:"sort_order"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	MangaCount  int64     `json:"manga_count,omitempty"` // Computed field
+}
+
+// FavoriteListItem represents a manga in a favorite list
+type FavoriteListItem struct {
+	ListID    string    `json:"list_id"`
+	MangaID   string    `json:"manga_id"`
+	Notes     string    `json:"notes,omitempty"`
+	AddedAt   time.Time `json:"added_at"`
+	SortOrder int       `json:"sort_order"`
+	Manga     *Manga    `json:"manga,omitempty"` // Computed field when joining
+}
+
 // RankedManga represents a manga with its ranking information for a specific period.
 type RankedManga struct {
 	Manga     *Manga `json:"manga"`
@@ -187,6 +222,18 @@ type MangaRepository interface {
 	DeleteMangaComment(ctx context.Context, commentID, userID primitive.ObjectID) error
 }
 
+// ReadingProgressRepository defines the reading progress data operations.
+type ReadingProgressRepository interface {
+	// SaveProgress saves or updates a user's reading progress for a manga
+	SaveProgress(ctx context.Context, progress *ReadingProgress) error
+	// GetProgress gets a user's reading progress for a specific manga
+	GetProgress(ctx context.Context, mangaID, userID primitive.ObjectID) (*ReadingProgress, error)
+	// GetProgressForMangas gets reading progress for multiple mangas
+	GetProgressForMangas(ctx context.Context, mangaIDs []primitive.ObjectID, userID primitive.ObjectID) (map[string]*ReadingProgress, error)
+	// DeleteProgress deletes a user's reading progress for a manga
+	DeleteProgress(ctx context.Context, mangaID, userID primitive.ObjectID) error
+}
+
 // MangaChapterRepository defines the manga chapter data operations.
 type MangaChapterRepository interface {
 	CreateMangaChapter(ctx context.Context, chapter *MangaChapter) error
@@ -215,6 +262,31 @@ type MangaChapterRepository interface {
 	AddChapterCommentReaction(ctx context.Context, reaction *ChapterCommentReaction) error
 	RemoveChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) error
 	GetUserChapterCommentReaction(ctx context.Context, commentID, userID primitive.ObjectID) (string, error)
+}
+
+// FavoriteListRepository defines the favorite list data operations.
+type FavoriteListRepository interface {
+	// List operations
+	CreateList(ctx context.Context, list *FavoriteList) error
+	GetListByID(ctx context.Context, listID string) (*FavoriteList, error)
+	GetListByName(ctx context.Context, userID, name string) (*FavoriteList, error)
+	ListUserLists(ctx context.Context, userID string, skip, limit int64) ([]*FavoriteList, int64, error)
+	UpdateList(ctx context.Context, list *FavoriteList) error
+	DeleteList(ctx context.Context, listID, userID string) error
+	GetListMangaCount(ctx context.Context, listID string) (int64, error)
+
+	// List item operations
+	AddMangaToList(ctx context.Context, item *FavoriteListItem) error
+	RemoveMangaFromList(ctx context.Context, listID, mangaID string) error
+	IsMangaInList(ctx context.Context, listID, mangaID string) (bool, error)
+	ListMangaInList(ctx context.Context, listID string, skip, limit int64) ([]*FavoriteListItem, int64, error)
+	UpdateListItemNotes(ctx context.Context, listID, mangaID, notes string) error
+	MoveMangaToList(ctx context.Context, fromListID, toListID, mangaID string) error
+	UpdateItemSortOrder(ctx context.Context, listID, mangaID string, sortOrder int) error
+
+	// Cross-list operations
+	GetUserMangaLists(ctx context.Context, userID, mangaID string) ([]*FavoriteList, error)
+	GetPublicListManga(ctx context.Context, listID string, skip, limit int64) ([]*Manga, int64, error)
 }
 
 // ----- END OF FILE: backend/MS-AI/internal/core/content/manga/manga.go -----

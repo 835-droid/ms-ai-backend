@@ -32,6 +32,7 @@ func initializeServices(cfg *config.Config, log *logger.Logger, repos *RepoBundl
 	// Manga services
 	var mangaSvc coremanga.MangaService
 	var chapterSvc coremanga.MangaChapterService
+	var favListSvc coremanga.FavoriteListService
 	if repos.Manga != nil && repos.MangaChapter != nil {
 		mangaSvc = coremanga.NewMangaService(repos.Manga, log)
 		chapterSvc = coremanga.NewMangaChapterService(repos.MangaChapter, repos.Manga, log)
@@ -41,10 +42,23 @@ func initializeServices(cfg *config.Config, log *logger.Logger, repos *RepoBundl
 		}
 	}
 
+	// Favorite List service - requires both FavList repo and Manga repo
+	if repos.FavList != nil && repos.Manga != nil {
+		favListSvc = coremanga.NewFavoriteListService(repos.FavList, repos.Manga, log)
+	}
+
+	// Viewing History service - requires ViewingHistory repo and Manga repo
+	var viewingHistorySvc coremanga.ViewingHistoryService
+	if repos.ViewingHistory != nil && repos.Manga != nil {
+		viewingHistorySvc = coremanga.NewViewingHistoryService(repos.ViewingHistory, repos.Manga)
+	}
+
 	return &serviceBundle{
-		Auth:    coreauth.NewAuthService(repos.User, cfg, log.GetZerologLogger()),
-		Admin:   adminSvc,
-		Manga:   mangaSvc,
-		Chapter: chapterSvc,
+		Auth:           coreauth.NewAuthService(repos.User, cfg, log.GetZerologLogger()),
+		Admin:          adminSvc,
+		Manga:          mangaSvc,
+		FavList:        favListSvc,
+		Chapter:        chapterSvc,
+		ViewingHistory: viewingHistorySvc,
 	}
 }

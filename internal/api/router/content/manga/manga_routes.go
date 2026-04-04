@@ -55,6 +55,22 @@ func SetupMangaRoutes(engine *gin.Engine, mangaHandler *manga.MangaHandler, chap
 			engagementGroup.POST("/:mangaID/comments", mangaHandler.AddMangaComment)
 			engagementGroup.GET("/:mangaID/comments", mangaHandler.ListMangaComments)
 			engagementGroup.DELETE("/:mangaID/comments/:comment_id", mangaHandler.DeleteMangaComment)
+
+			// Favorite Lists routes
+			listsGroup := engagementGroup.Group("/lists")
+			{
+				listsGroup.GET("", mangaHandler.ListMyFavoriteLists)
+				listsGroup.POST("", mangaHandler.CreateFavoriteList)
+				listsGroup.GET("/:listID", mangaHandler.GetFavoriteList)
+				listsGroup.PUT("/:listID", mangaHandler.UpdateFavoriteList)
+				listsGroup.DELETE("/:listID", mangaHandler.DeleteFavoriteList)
+				listsGroup.GET("/:listID/items", mangaHandler.ListMangaInList)
+				listsGroup.POST("/:listID/items", mangaHandler.AddMangaToList)
+				listsGroup.DELETE("/:listID/items/:mangaID", mangaHandler.RemoveMangaFromList)
+			}
+
+			// Get lists containing a specific manga
+			engagementGroup.GET("/:mangaID/lists", mangaHandler.GetUserMangaLists)
 		}
 
 		chapters := mangas.Group("/:mangaID/chapters")

@@ -39,7 +39,7 @@ function renderRecentlyUpdated(mangas) {
                     <img class="manga-cover" src="${escapeHtml(cover)}" alt="${escapeHtml(manga.title)}" onerror="this.src='https://via.placeholder.com/400x560?text=Manga'">
                     <div class="manga-info">
                         <h3 class="manga-title">${escapeHtml(manga.title)}</h3>
-                        <p class="manga-description">${escapeHtml(manga.description || '')}</p>
+                        ${createDescriptionHTML(manga.description || '')}
                         <div class="manga-meta">
                             <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
                         </div>
@@ -86,7 +86,7 @@ function renderTrending(rankedMangas) {
                                 <span class="rating-badge">⭐ ${escapeHtml(formatRating(averageRating))}</span>
                                 <span class="trending-views">👁 ${escapeHtml(formatCompactNumber(viewCount))}</span>
                             </div>
-                            <p class="manga-description">${escapeHtml(manga.description || '')}</p>
+                            ${createDescriptionHTML(manga.description || '')}
                             <div class="manga-meta">
                                 <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
                             </div>
@@ -126,7 +126,7 @@ function renderMostFollowed(mangas) {
                         <div class="manga-rating-top">
                             <span class="favorites-count">❤️ ${escapeHtml(formatCompactNumber(favoritesCount))}</span>
                         </div>
-                        <p class="manga-description">${escapeHtml(manga.description || '')}</p>
+                        ${createDescriptionHTML(manga.description || '')}
                         <div class="manga-meta">
                             <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
                         </div>
@@ -168,7 +168,7 @@ function renderTopRated(mangas) {
                             <span class="rating-badge">⭐ ${escapeHtml(formatRating(averageRating))}</span>
                             <span class="rating-count" style="color: var(--text-muted); font-size: 0.75rem;">(${escapeHtml(formatCompactNumber(ratingCount))} تقييم)</span>
                         </div>
-                        <p class="manga-description">${escapeHtml(manga.description || '')}</p>
+                        ${createDescriptionHTML(manga.description || '')}
                         <div class="manga-meta">
                             <span>${Array.isArray(manga.tags) ? manga.tags.length : 0} tags</span>
                         </div>

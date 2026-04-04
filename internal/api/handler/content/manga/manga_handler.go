@@ -16,7 +16,8 @@ import (
 
 // MangaHandler handles manga-related requests
 type MangaHandler struct {
-	service manga.MangaService
+	service        manga.MangaService
+	favListService manga.FavoriteListService
 }
 
 // reactionRequest represents a reaction request payload.
@@ -24,8 +25,8 @@ type reactionRequest struct {
 	Type string `json:"type" binding:"required,oneof=upvote funny love surprised angry sad"`
 }
 
-func NewMangaHandler(s manga.MangaService) *MangaHandler {
-	return &MangaHandler{service: s}
+func NewMangaHandler(s manga.MangaService, favListService manga.FavoriteListService) *MangaHandler {
+	return &MangaHandler{service: s, favListService: favListService}
 }
 
 // getPaginationParams extracts and validates pagination parameters
