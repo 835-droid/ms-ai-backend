@@ -12,6 +12,7 @@ import (
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 	"github.com/835-droid/ms-ai-backend/pkg/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"golang.org/x/crypto/bcrypt"
 
 	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
 )
@@ -208,6 +209,31 @@ func (s *DefaultAdminService) DeleteUser(ctx context.Context, userID string) err
 		return fmt.Errorf("invalid user id: %w", err)
 	}
 	return s.userRepo.Delete(ctx, oid)
+}
+
+func (s *DefaultAdminService) ChangeUserPassword(ctx context.Context, userID string, newPassword string) error {
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+
+	u, err := s.userRepo.FindByID(ctx, oid)
+	if err != nil {
+		return err
+	}
+	if u == nil {
+		return corecommon.ErrUserNotFound
+	}
+
+	// Hash the new password using bcrypt
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	u.Password = string(hashedPassword)
+	u.UpdatedAt = time.Now()
+	return s.userRepo.Update(ctx, u)
 }
 
 // ----- END OF FILE: backend/MS-AI/internal/core/admin/admin_service.go -----

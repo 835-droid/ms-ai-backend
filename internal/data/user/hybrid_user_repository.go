@@ -7,6 +7,7 @@ import (
 
 	core "github.com/835-droid/ms-ai-backend/internal/core/common"
 	"github.com/835-droid/ms-ai-backend/internal/core/user"
+	coreUser "github.com/835-droid/ms-ai-backend/internal/core/user"
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -277,19 +278,74 @@ func (r *HybridUserRepository) UpdateRefreshToken(ctx context.Context, userID pr
 	if r.primary != nil {
 		if err := r.primary.UpdateRefreshToken(ctx, userID, token, expiresAt); err != nil {
 			r.log.Error("primary update refresh token failed", map[string]interface{}{"error": err.Error()})
+			// If primary fails, we should fail as it's the source of truth
+			if r.secondary == nil {
+				return err
+			}
 		}
 	}
 	if r.secondary != nil {
 		if err := r.secondary.UpdateRefreshToken(ctx, userID, token, expiresAt); err != nil {
-			r.log.Error("secondary update refresh token failed", map[string]interface{}{"error": err.Error()})
-			if r.primary == nil {
-				return err
+			// Log the error but don't fail if primary succeeded
+			// This allows the system to continue working even if secondary is out of sync
+			r.log.Warn("secondary update refresh token failed - user may not be synced", map[string]interface{}{"error": err.Error(), "userId": userID.Hex()})
+			// Try to sync the user to secondary if the error is "user not found"
+			if errors.Is(err, core.ErrUserNotFound) {
+				r.syncUserToSecondary(ctx, userID)
 			}
 		}
 	} else if r.primary == nil {
 		return errors.New("no repositories available")
 	}
 	return nil
+}
+
+// syncUserToSecondary attempts to sync a user from primary to secondary repository
+func (r *HybridUserRepository) syncUserToSecondary(ctx context.Context, userID primitive.ObjectID) {
+	if r.primary == nil || r.secondary == nil {
+		return
+	}
+
+	// Fetch user from primary
+	user, err := r.primary.FindByID(ctx, userID)
+	if err != nil || user == nil {
+		r.log.Error("syncUserToSecondary: failed to find user in primary", map[string]interface{}{"error": err, "userId": userID.Hex()})
+		return
+	}
+
+	// Build user details from user data
+	details := &coreUser.UserDetails{
+		UUID:                  user.UUID,
+		UserID:                user.UserID,
+		Status:                "active",
+		LastLoginAt:           user.LastLoginAt,
+		RefreshToken:          user.RefreshToken,
+		RefreshTokenExpiresAt: user.RefreshTokenExpiresAt,
+		CreatedAt:             user.CreatedAt,
+		UpdatedAt:             user.UpdatedAt,
+	}
+
+	// Try to create the user in secondary
+	if err := r.secondary.Create(ctx, user, details); err != nil {
+		// If create fails, try update (user might exist but with different data)
+		if updateErr := r.secondary.Update(ctx, user); updateErr != nil {
+			r.log.Error("syncUserToSecondary: failed to sync user to secondary", map[string]interface{}{
+				"error":    updateErr.Error(),
+				"userId":   userID.Hex(),
+				"username": user.Username,
+			})
+		} else {
+			r.log.Info("syncUserToSecondary: user updated in secondary", map[string]interface{}{
+				"userId":   userID.Hex(),
+				"username": user.Username,
+			})
+		}
+	} else {
+		r.log.Info("syncUserToSecondary: user created in secondary", map[string]interface{}{
+			"userId":   userID.Hex(),
+			"username": user.Username,
+		})
+	}
 }
 
 func (r *HybridUserRepository) InvalidateRefreshToken(ctx context.Context, userID primitive.ObjectID) error {

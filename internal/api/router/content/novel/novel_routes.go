@@ -27,7 +27,6 @@ func SetupNovelRoutes(engine *gin.Engine, novelHandler *novel.NovelHandler, cfg 
 		authGroup := novels.Group("")
 		{
 			authGroup.Use(middleware.AuthMiddleware(cfg, userRepo))
-			authGroup.Use(middleware.RequireRole("admin"))
 			authGroup.Use(writeLimit)
 			authGroup.POST("", novelHandler.CreateNovel)
 			authGroup.PUT("/:novelID", novelHandler.UpdateNovel)

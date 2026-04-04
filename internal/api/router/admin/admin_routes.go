@@ -11,7 +11,8 @@ import (
 )
 
 func SetupAdminRoutes(engine *gin.Engine, adminHandler *admin.Handler, cfg *config.Config, userRepo coreuser.Repository) {
-	adminLimit := middleware.RateLimitMiddlewareFromConfig(cfg, 0.02)
+	// Use 5% of rate limit for admin endpoints (more permissive for dashboard usage)
+	adminLimit := middleware.RateLimitMiddlewareFromConfig(cfg, 0.05)
 
 	adminGroup := engine.Group("/api/admin")
 	{
@@ -33,6 +34,7 @@ func SetupAdminRoutes(engine *gin.Engine, adminHandler *admin.Handler, cfg *conf
 		adminGroup.GET("/users", adminHandler.ListUsers)
 		adminGroup.PUT("/users/:id/promote", adminHandler.PromoteUser)
 		adminGroup.PUT("/users/:id/demote", adminHandler.DemoteUser)
+		adminGroup.PUT("/users/:id/password", adminHandler.ChangePassword)
 		adminGroup.PUT("/users/:id/deactivate", adminHandler.DeactivateUser)
 		adminGroup.DELETE("/users/:id", adminHandler.DeleteUser)
 	}

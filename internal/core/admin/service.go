@@ -20,6 +20,7 @@ type Service interface {
 	ListUsers(ctx context.Context, page, limit int) ([]*UserInfo, int64, error)
 	PromoteToAdmin(ctx context.Context, userID string) error
 	DemoteToUser(ctx context.Context, userID string) error
+	ChangeUserPassword(ctx context.Context, userID string, newPassword string) error
 	DeactivateUser(ctx context.Context, userID string) error
 	DeleteUser(ctx context.Context, userID string) error
 }

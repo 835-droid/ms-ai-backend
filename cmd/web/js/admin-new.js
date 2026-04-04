@@ -814,25 +814,64 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial load
     loadDashboard();
-    loadUsers();
+
+    // Load users only when users section is active
+    const usersSection = document.getElementById('section-users');
+    if (usersSection && usersSection.classList.contains('active')) {
+        loadUsers();
+    }
+
+    // Load users when switching to users section
+    document.querySelectorAll('.admin-nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (item.dataset.section === 'users') {
+                setTimeout(() => loadUsers(), 100);
+            }
+        });
+    });
 });
 
 // ========== Users Management ==========
-async function loadUsers() {
+let usersCache = null;
+let usersCacheTime = 0;
+const CACHE_DURATION = 30000; // 30 seconds cache
+
+async function loadUsers(forceRefresh = false) {
     const container = document.getElementById('users-list-container');
     if (!container) return;
 
+    // Use cache if available and not expired
+    if (!forceRefresh && usersCache && (Date.now() - usersCacheTime) < CACHE_DURATION) {
+        renderUsersTable(usersCache);
+        return;
+    }
+
     try {
         const data = await apiFetch('/admin/users?page=1&limit=50');
-        const users = data.users || [];
+        usersCache = data.users || [];
+        usersCacheTime = Date.now();
+        renderUsersTable(usersCache);
+    } catch (error) {
+        handleUsersError(error, container);
+    }
+}
 
-        if (users.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>لا يوجد مستخدمين</p></div>';
-            return;
-        }
+function renderUsersTable(users) {
+    const container = document.getElementById('users-list-container');
+    if (!container) return;
 
-        container.innerHTML = `
-            <table class="admin-table">
+    if (users.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>لا يوجد مستخدمين</p></div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <button class="btn btn-sm btn-secondary" onclick="loadUsers(true)" title="تحديث">
+                <i class="fas fa-sync"></i> تحديث
+            </button>
+        </div>
+        <table class="admin-table">
                 <thead>
                     <tr>
                         <th>المستخدم</th>
@@ -880,6 +919,9 @@ async function loadUsers() {
                                             <i class="fas fa-user-plus"></i>
                                         </button>
                                     `}
+                                    <button class="btn btn-sm btn-info" onclick="changeUserPassword('${user.id}', '${escapeHtml(user.username || 'مستخدم')}')" title="تغيير كلمة المرور">
+                                        <i class="fas fa-key"></i>
+                                    </button>
                                     <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}')" title="حذف المستخدم">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -889,9 +931,9 @@ async function loadUsers() {
                     `).join('')}
                 </tbody>
             </table>
-        `;
+    `;
 
-        // Add CSS for admin table
+    // Add CSS for admin table
         if (!document.getElementById('admin-table-styles')) {
             const style = document.createElement('style');
             style.id = 'admin-table-styles';
@@ -936,9 +978,16 @@ async function loadUsers() {
             `;
             document.head.appendChild(style);
         }
-    } catch (error) {
-        console.error('Failed to load users:', error);
-        container.innerHTML = '<div class="error-state"><p>فشل تحميل المستخدمين</p></div>';
+}
+
+function handleUsersError(error, container) {
+    console.error('Failed to load users:', error);
+    if (error.message.includes('401') || error.message.includes('unauthorized')) {
+        container.innerHTML = '<div class="error-state"><p>⚠️ يجب تسجيل الدخول كـ مشرف لعرض المستخدمين</p><button class="btn btn-primary" onclick="window.location.href=\'dashboard.html\'" style="margin-top:1rem;">تسجيل الدخول</button></div>';
+    } else if (error.message.includes('429') || error.message.includes('too many requests')) {
+        container.innerHTML = '<div class="error-state"><p>⚠️ تم إرسال طلبات كثيرة، يرجى الانتظار 30 ثانية</p><button class="btn btn-primary" onclick="loadUsers(true)" style="margin-top:1rem;">إعادة المحاولة</button></div>';
+    } else {
+        container.innerHTML = '<div class="error-state"><p>فشل تحميل المستخدمين: ' + escapeHtml(error.message) + '</p></div>';
     }
 }
 
@@ -975,6 +1024,27 @@ async function deleteUser(userId) {
         loadUsers();
     } catch (error) {
         showToast(error.message || 'فشل الحذف', 'error');
+    }
+}
+
+async function changeUserPassword(userId, username) {
+    const newPassword = prompt(`تغيير كلمة المرور للمستخدم: ${username}\n\nأدخل كلمة المرور الجديدة:`);
+    if (!newPassword) return;
+    if (newPassword.length < 6) {
+        showToast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+        return;
+    }
+
+    if (!confirm('هل أنت متأكد من تغيير كلمة المرور لهذا المستخدم؟')) return;
+
+    try {
+        await apiFetch(`/admin/users/${encodeURIComponent(userId)}/password`, {
+            method: 'PUT',
+            body: JSON.stringify({ password: newPassword })
+        });
+        showToast('تم تغيير كلمة المرور بنجاح', 'success');
+    } catch (error) {
+        showToast(error.message || 'فشل تغيير كلمة المرور', 'error');
     }
 }
 
@@ -1040,3 +1110,8 @@ window.deleteManga = deleteManga;
 window.deleteChapter = deleteChapter;
 window.goToPage = goToPage;
 window.removeNovelTag = removeNovelTag;
+window.promoteUser = promoteUser;
+window.demoteUser = demoteUser;
+window.deleteUser = deleteUser;
+window.loadUsers = loadUsers;
+window.changeUserPassword = changeUserPassword;

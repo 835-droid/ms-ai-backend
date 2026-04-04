@@ -165,4 +165,27 @@ func (h *Handler) DemoteUser(c *gin.Context) {
 	response.SuccessResp(c, http.StatusOK, gin.H{"message": i18n.TContext(c, i18n.MsgUserProfileUpdated)})
 }
 
+func (h *Handler) ChangePassword(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationRequired))
+		return
+	}
+
+	var req struct {
+		Password string `json:"password" binding:"required,min=6"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationMinLength))
+		return
+	}
+
+	if err := h.service.ChangeUserPassword(c.Request.Context(), userID, req.Password); err != nil {
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+		return
+	}
+
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": "تم تغيير كلمة المرور بنجاح"})
+}
+
 // ----- END OF FILE: backend/MS-AI/internal/api/handler/admin/admin_handler.go -----
