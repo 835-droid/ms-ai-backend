@@ -14,6 +14,7 @@ import (
 	adminrouter "github.com/835-droid/ms-ai-backend/internal/api/router/admin"
 	authrouter "github.com/835-droid/ms-ai-backend/internal/api/router/auth"
 	mangarouter "github.com/835-droid/ms-ai-backend/internal/api/router/content/manga"
+	novelrouter "github.com/835-droid/ms-ai-backend/internal/api/router/content/novel"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,6 +32,7 @@ func Setup(
 	healthHandler := container.HealthHandler
 	mangaHandler := container.MangaHandler
 	mangaChapterHandler := container.MangaChapterHandler
+	novelHandler := container.NovelHandler
 
 	r.Use(i18n.LanguageMiddleware())
 	r.Use(middleware.RecoveryMiddleware(log))
@@ -41,6 +43,10 @@ func Setup(
 	if mangaHandler != nil && mangaChapterHandler != nil {
 		mangarouter.SetupMangaRoutes(r, mangaHandler, mangaChapterHandler, cfg, userRepo)
 		r.GET("/api/assets/image-proxy", mangaChapterHandler.ProxyImage)
+	}
+
+	if novelHandler != nil {
+		novelrouter.SetupNovelRoutes(r, novelHandler, cfg, userRepo)
 	}
 
 	r.GET("/health", healthHandler.LivenessCheck)

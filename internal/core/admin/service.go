@@ -19,6 +19,7 @@ type Service interface {
 	GetDBMetrics(ctx context.Context) map[string]interface{}
 	ListUsers(ctx context.Context, page, limit int) ([]*UserInfo, int64, error)
 	PromoteToAdmin(ctx context.Context, userID string) error
+	DemoteToUser(ctx context.Context, userID string) error
 	DeactivateUser(ctx context.Context, userID string) error
 	DeleteUser(ctx context.Context, userID string) error
 }

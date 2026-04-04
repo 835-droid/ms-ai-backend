@@ -53,6 +53,14 @@
                 <i class="fas fa-plus-circle"></i>
                 <span>إضافة مانجا</span>
             </a>
+            <a class="admin-nav-item" data-section="novels">
+                <i class="fas fa-scroll"></i>
+                <span>إدارة الروايات</span>
+            </a>
+            <a class="admin-nav-item" data-section="add-novel">
+                <i class="fas fa-pen-nib"></i>
+                <span>إضافة رواية</span>
+            </a>
             <a class="admin-nav-item" data-section="chapters">
                 <i class="fas fa-layer-group"></i>
                 <span>إدارة الفصول</span>
@@ -64,6 +72,10 @@
             <a class="admin-nav-item" data-section="authors">
                 <i class="fas fa-users"></i>
                 <span>إدارة المؤلفين</span>
+            </a>
+            <a class="admin-nav-item" data-section="users">
+                <i class="fas fa-users-cog"></i>
+                <span>إدارة المستخدمين</span>
             </a>
             <a class="admin-nav-item" data-section="settings">
                 <i class="fas fa-sliders-h"></i>
@@ -93,6 +105,11 @@
                     <div class="stat-label-admin">إجمالي المانجا</div>
                 </div>
                 <div class="stat-card-admin">
+                    <div class="stat-icon novels"><i class="fas fa-scroll"></i></div>
+                    <div class="stat-number-admin" id="stat-total-novels">0</div>
+                    <div class="stat-label-admin">إجمالي الروايات</div>
+                </div>
+                <div class="stat-card-admin">
                     <div class="stat-icon chapters"><i class="fas fa-layer-group"></i></div>
                     <div class="stat-number-admin" id="stat-total-chapters">0</div>
                     <div class="stat-label-admin">إجمالي الفصول</div>
@@ -116,7 +133,10 @@
                     <button class="btn btn-primary" onclick="switchSection('add-manga')">
                         <i class="fas fa-plus"></i> إضافة مانجا جديدة
                     </button>
-                    <button class="btn btn-success" onclick="switchSection('chapters')">
+                    <button class="btn btn-success" onclick="switchSection('add-novel')">
+                        <i class="fas fa-pen-nib"></i> إضافة رواية جديدة
+                    </button>
+                    <button class="btn btn-info" onclick="switchSection('chapters')">
                         <i class="fas fa-upload"></i> رفع فصل
                     </button>
                     <button class="btn btn-secondary" onclick="switchSection('bulk')">
@@ -282,6 +302,129 @@
             </form>
         </section>
 
+        <!-- Novels Section -->
+        <section id="section-novels" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-scroll"></i> إدارة الروايات</h2>
+                <button class="btn btn-primary" onclick="switchSection('add-novel')">
+                    <i class="fas fa-plus"></i> إضافة رواية
+                </button>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <input type="text" id="search-novel" placeholder="🔍 بحث عن رواية..." style="flex: 1;">
+                <select id="filter-novel-status">
+                    <option value="all">جميع الحالات</option>
+                    <option value="published">منشور</option>
+                    <option value="draft">مسودة</option>
+                </select>
+                <button id="batch-delete-novels-btn" class="btn btn-danger" disabled>
+                    <i class="fas fa-trash"></i> حذف المحدد
+                </button>
+            </div>
+
+            <!-- Batch Actions -->
+            <div style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="select-all-novels"> تحديد الكل
+                </label>
+                <span id="selected-novels-count" style="color: var(--admin-text-muted); font-size: 0.875rem;">0 رواية محددة</span>
+            </div>
+
+            <!-- Novel List -->
+            <div id="novel-list-container">
+                <div class="loading"><div class="loading-spinner"></div><p style="color: var(--admin-text-muted);">جاري تحميل الروايات...</p></div>
+            </div>
+
+            <!-- Pagination -->
+            <div id="novel-pagination" style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem;"></div>
+        </section>
+
+        <!-- Add Novel Section -->
+        <section id="section-add-novel" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-pen-nib"></i> إضافة رواية جديدة</h2>
+            </div>
+
+            <form id="add-novel-form">
+                <div class="admin-form">
+                    <!-- Basic Info -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-info-circle"></i> المعلومات الأساسية</h3>
+                        <div class="form-group">
+                            <label>عنوان الرواية *</label>
+                            <input id="novel-title" type="text" required placeholder="اكتب عنوان الرواية...">
+                        </div>
+                        <div class="form-group">
+                            <label>المؤلف</label>
+                            <select id="novel-author">
+                                <option value="">اختر المؤلف</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>الوصف *</label>
+                            <textarea id="novel-description" rows="4" required placeholder="وصf الرواية..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Cover & Gallery -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-image"></i> الغلاف</h3>
+                        <div class="form-group">
+                            <label>رابط صورة الغلاف</label>
+                            <input id="novel-cover-url" type="text" placeholder="https://...">
+                            <div id="novel-cover-preview" class="preview-grid"></div>
+                        </div>
+                    </div>
+
+                    <!-- Categories & Tags -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-tags"></i> التصنيفات والعلامات</h3>
+                        <div class="form-group">
+                            <label>التصنيفات</label>
+                            <select id="novel-categories" multiple size="6">
+                                <option value="رومانسية">رومانسية</option>
+                                <option value="خيال">خيال</option>
+                                <option value="إثارة">إثارة</option>
+                                <option value="تاريخية">تاريخية</option>
+                                <option value="دراما">دراما</option>
+                                <option value="مغامرة">مغامرة</option>
+                                <option value="رعب">رعب</option>
+                                <option value="خيال علمي">خيال علمي</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>العلامات المخصصة</label>
+                            <input id="novel-tags-input" type="text" placeholder="اكتب علامة ثم اضغط Enter">
+                            <div id="novel-tags-container" class="tags-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Settings -->
+                    <div class="form-section">
+                        <h3><i class="fas fa-sliders-h"></i> إعدادات إضافية</h3>
+                        <div class="form-group">
+                            <label>الحالة</label>
+                            <select id="novel-status">
+                                <option value="published">منشور</option>
+                                <option value="draft">مسودة</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> حفظ الرواية
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetAddNovelForm()">
+                        <i class="fas fa-redo"></i> إعادة تعيين
+                    </button>
+                </div>
+            </form>
+        </section>
+
         <!-- Chapters Section - Improved Layout -->
         <section id="section-chapters" class="admin-section">
             <div class="section-header">
@@ -406,6 +549,20 @@
 
             <div id="authors-list">
                 <div class="loading"><div class="loading-spinner"></div><p style="color: var(--admin-text-muted);">جاري تحميل المؤلفين...</p></div>
+            </div>
+        </section>
+
+        <!-- Users Section -->
+        <section id="section-users" class="admin-section">
+            <div class="section-header">
+                <h2><i class="fas fa-users-cog"></i> إدارة المستخدمين</h2>
+            </div>
+
+            <div class="admin-card">
+                <h3 style="color: var(--admin-text); margin-bottom: 1rem;"><i class="fas fa-users" style="color: var(--admin-primary);"></i> قائمة المستخدمين</h3>
+                <div id="users-list-container">
+                    <div class="loading"><div class="loading-spinner"></div><p style="color: var(--admin-text-muted);">جاري تحميل المستخدمين...</p></div>
+                </div>
             </div>
         </section>
 

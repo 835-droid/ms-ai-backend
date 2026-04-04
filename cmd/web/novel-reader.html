@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-AI | قارئ الروايات</title>
+    <link rel="stylesheet" href="css/base.css?v=20260403-dark">
+    <link rel="stylesheet" href="css/modern.css?v=20260403-dark">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/reader.css">
+    <!-- Font Awesome 6 (مجاني) للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .reader-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .chapter-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+        .chapter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .chapter-nav {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .font-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .font-size-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="navbar-brand"><i class="fas fa-book"></i> MS-AI</a>
+        <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
+        <ul class="navbar-menu">
+            <li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li>
+            <li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li>
+            <li><a href="novels.html"><i class="fas fa-scroll"></i> الروايات</a></li>
+            <li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li>
+            <li><a href="history.html"><i class="fas fa-history"></i> السجل</a></li>
+        </ul>
+        <div class="navbar-right">
+            <button class="dark-mode-toggle"></button>
+            <button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
+            <a href="profile.html" class="navbar-user-badge" title="الملف الشخصي">
+                <span id="user-display-name">مستخدم</span>
+                <div class="navbar-user-avatar">US</div>
+            </a>
+        </div>
+    </nav>
+
+    <main class="page-shell">
+        <section class="page-card">
+            <div class="chapter-header">
+                <div>
+                    <a href="novel-details.html?id=" id="novel-link" class="text-link">
+                        <i class="fas fa-arrow-right"></i> عودة للرواية
+                    </a>
+                    <h1 id="chapter-title">جاري التحميل...</h1>
+                </div>
+                <div class="font-controls">
+                    <button class="btn btn-sm btn-secondary font-size-btn" onclick="changeFontSize(-1)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span id="font-size-display">16px</span>
+                    <button class="btn btn-sm btn-secondary font-size-btn" onclick="changeFontSize(1)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="chapter-message" class="message" style="display:none;"></div>
+
+            <div id="chapter-content" class="chapter-content">
+                <p>جاري تحميل محتوى الفصل...</p>
+            </div>
+
+            <div class="chapter-nav">
+                <button id="prev-chapter" class="btn btn-secondary" onclick="goToPrevChapter()">
+                    <i class="fas fa-arrow-right"></i> الفصل السابق
+                </button>
+                <button id="next-chapter" class="btn btn-primary" onclick="goToNextChapter()">
+                    الفصل التالي <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/config.js?v=20260402"></script>
+    <script src="js/auth.js?v=20260402"></script>
+    <script src="js/api.js?v=20260402"></script>
+    <script src="js/toast.js?v=20260402"></script>
+    <script src="js/common.js?v=20260402"></script>
+    <script>
+        // Get URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const novelID = urlParams.get('id');
+        const chapterID = urlParams.get('chapter');
+
+        let currentFontSize = 16;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!novelID) {
+                showMessage('معرف الرواية مطلوب', 'error');
+                return;
+            }
+            
+            document.getElementById('novel-link').href = `novel-details.html?id=${novelID}`;
+            loadChapter();
+            
+            // Load saved font size
+            const savedSize = localStorage.getItem('novelReaderFontSize');
+            if (savedSize) {
+                currentFontSize = parseInt(savedSize);
+                updateFontSize();
+            }
+
+            // Track view
+            API.incrementNovelViews(novelID).catch(() => {});
+        });
+
+        async function loadChapter() {
+            const contentDiv = document.getElementById('chapter-content');
+            
+            try {
+                // For now, show placeholder content since chapter API is not fully implemented
+                contentDiv.innerHTML = `
+                    <h2>الفصل ${chapterID || 1}</h2>
+                    <p>محتوى الفصل قادم قريباً...</p>
+                    <p>هذا النص هو مثال لنص يمكن أن يستبدل في نفس المساحة، لقد تم توليد هذا النص من مولد النص العربى، حيث يمكنك أن تولد مثل هذا النص أو العديد من النصوص الأخرى إضافة إلى زيادة عدد الحروف التى يولدها التطبيق.</p>
+                    <p>إذا كنت تحتاج إلى عدد أكبر من الفقرات يتيح لك مولد النص العربى زيادة عدد الفقرات كما تريد، النص لن يبدو مقسما ولا يحوي أخطاء لغوية، مولد النص العربى مفيد لمصممي المواقع على وجه الخصوص، حيث يحتاج العميل فى كثير من الأحيان أن يطلع على صورة حقيقية لتصميم الموقع.</p>
+                    <p>ومن هنا وجب على المصمم أن يضع نصوصا مؤقتة على التصميم ليظهر للعميل الشكل كاملاً،دور مولد النص العربى أن يوفر على المصمم عناء البحث عن نص بديل لا علاقة له بالموضوع الذى يتحدث عنه التصميم فيظهر بشكل لا يليق.</p>
+                `;
+                
+                document.getElementById('chapter-title').textContent = `الفصل ${chapterID || 1}`;
+            } catch (error) {
+                console.error('Error loading chapter:', error);
+                contentDiv.innerHTML = '<p>فشل تحميل الفصل. يرجى المحاولة لاحقاً.</p>';
+            }
+        }
+
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(12, Math.min(24, currentFontSize + delta));
+            localStorage.setItem('novelReaderFontSize', currentFontSize);
+            updateFontSize();
+        }
+
+        function updateFontSize() {
+            const contentDiv = document.getElementById('chapter-content');
+            contentDiv.style.fontSize = `${currentFontSize}px`;
+            document.getElementById('font-size-display').textContent = `${currentFontSize}px`;
+        }
+
+        function goToPrevChapter() {
+            if (chapterID > 1) {
+                window.location.href = `novel-reader.html?id=${novelID}&chapter=${parseInt(chapterID) - 1}`;
+            } else {
+                showToast('هذا هو الفصل الأول', 'info');
+            }
+        }
+
+        function goToNextChapter() {
+            // In a real implementation, we would check if next chapter exists
+            window.location.href = `novel-reader.html?id=${novelID}&chapter=${parseInt(chapterID || 1) + 1}`;
+        }
+
+        function showMessage(text, type = 'info') {
+            const msgDiv = document.getElementById('chapter-message');
+            msgDiv.textContent = text;
+            msgDiv.className = `message message-${type}`;
+            msgDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

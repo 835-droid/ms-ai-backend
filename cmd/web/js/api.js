@@ -109,3 +109,57 @@ async function apiFetch(path, options = {}, meta = {}) {
 
     return data?.data !== undefined ? data.data : data;
 }
+
+// ==================== NOVEL API FUNCTIONS ====================
+
+const API = {
+    // Manga APIs
+    getMangas: (page = 1, limit = 20) => apiFetch(`/mangas?page=${page}&limit=${limit}`),
+    getManga: (id) => apiFetch(`/mangas/${id}`),
+    getMostViewedMangas: (period = 'day', limit = 10) => apiFetch(`/mangas/most-viewed?period=${period}&limit=${limit}`),
+    getRecentlyUpdatedMangas: (limit = 10) => apiFetch(`/mangas/recently-updated?limit=${limit}`),
+    getMostFollowedMangas: (limit = 10) => apiFetch(`/mangas/most-followed?limit=${limit}`),
+    getTopRatedMangas: (limit = 10) => apiFetch(`/mangas/top-rated?limit=${limit}`),
+    
+    // Manga engagement
+    incrementMangaViews: (id) => apiFetch(`/mangas/${id}/view`, { method: 'POST' }),
+    setMangaReaction: (id, type) => apiFetch(`/mangas/${id}/react`, { method: 'POST', body: JSON.stringify({ type }) }),
+    getMangaUserReaction: (id) => apiFetch(`/mangas/${id}/my-reaction`),
+    rateManga: (id, score) => apiFetch(`/mangas/${id}/rate`, { method: 'POST', body: JSON.stringify({ score }) }),
+    addMangaFavorite: (id) => apiFetch(`/mangas/${id}/favorite`, { method: 'POST' }),
+    removeMangaFavorite: (id) => apiFetch(`/mangas/${id}/favorite`, { method: 'DELETE' }),
+    checkMangaFavorite: (id) => apiFetch(`/mangas/${id}/favorite`),
+    listMangaFavorites: (page = 1, limit = 20) => apiFetch(`/mangas/favorites?page=${page}&limit=${limit}`),
+    addMangaComment: (id, content) => apiFetch(`/mangas/${id}/comments`, { method: 'POST', body: JSON.stringify({ content }) }),
+    getMangaComments: (id, page = 1, limit = 20, sort = 'newest') => apiFetch(`/mangas/${id}/comments?page=${page}&limit=${limit}&sort=${sort}`),
+    deleteMangaComment: (id, commentId) => apiFetch(`/mangas/${id}/comments/${commentId}`, { method: 'DELETE' }),
+
+    // Novel APIs
+    getNovels: (page = 1, limit = 20) => apiFetch(`/novels?page=${page}&limit=${limit}`),
+    getNovel: (id) => apiFetch(`/novels/${id}`),
+    getMostViewedNovels: (period = 'day', limit = 10) => apiFetch(`/novels/most-viewed?period=${period}&limit=${limit}`),
+    getRecentlyUpdatedNovels: (limit = 10) => apiFetch(`/novels/recently-updated?limit=${limit}`),
+    getMostFollowedNovels: (limit = 10) => apiFetch(`/novels/most-followed?limit=${limit}`),
+    getTopRatedNovels: (limit = 10) => apiFetch(`/novels/top-rated?limit=${limit}`),
+    
+    // Novel engagement
+    incrementNovelViews: (id) => apiFetch(`/novels/${id}/view`, { method: 'POST' }),
+    setNovelReaction: (id, type) => apiFetch(`/novels/${id}/react`, { method: 'POST', body: JSON.stringify({ type }) }),
+    getNovelUserReaction: (id) => apiFetch(`/novels/${id}/my-reaction`),
+    rateNovel: (id, score) => apiFetch(`/novels/${id}/rate`, { method: 'POST', body: JSON.stringify({ score }) }),
+    addNovelFavorite: (id) => apiFetch(`/novels/${id}/favorite`, { method: 'POST' }),
+    removeNovelFavorite: (id) => apiFetch(`/novels/${id}/favorite`, { method: 'DELETE' }),
+    checkNovelFavorite: (id) => apiFetch(`/novels/${id}/favorite`),
+    listNovelFavorites: (page = 1, limit = 20) => apiFetch(`/novels/favorites?page=${page}&limit=${limit}`),
+    addNovelComment: (id, content) => apiFetch(`/novels/${id}/comments`, { method: 'POST', body: JSON.stringify({ content }) }),
+    getNovelComments: (id, page = 1, limit = 20, sort = 'newest') => apiFetch(`/novels/${id}/comments?page=${page}&limit=${limit}&sort=${sort}`),
+    deleteNovelComment: (id, commentId) => apiFetch(`/novels/${id}/comments/${commentId}`, { method: 'DELETE' }),
+    
+    // Novel chapters
+    getNovelChapters: (novelId, page = 1, limit = 100) => apiFetch(`/novels/${novelId}/chapters?page=${page}&limit=${limit}`),
+    getNovelChapter: (novelId, chapterId) => apiFetch(`/novels/${novelId}/chapters/${chapterId}`),
+    
+    // Reading progress
+    getNovelReadingProgress: (novelId) => apiFetch(`/novels/${novelId}/progress`, { skipAuth: true }),
+    setNovelReadingProgress: (novelId, chapterId) => apiFetch(`/novels/${novelId}/progress`, { method: 'POST', body: JSON.stringify({ chapter_id: chapterId }) }),
+};

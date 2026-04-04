@@ -8,5 +8,5 @@ import (
 )
 
 func initializeHandlers(svcs *serviceBundle, m *mongoinfra.MongoStore, p *pginfra.PostgresStore) *handler.Container {
-	return handler.NewContainer(svcs.Auth, svcs.Manga, svcs.FavList, svcs.Chapter, svcs.Admin, svcs.ViewingHistory, m, p)
+	return handler.NewContainer(svcs.Auth, svcs.Manga, svcs.FavList, svcs.Chapter, svcs.Admin, svcs.ViewingHistory, svcs.Novel, m, p)
 }

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-AI | المانجا</title>
+    <link rel="stylesheet" href="css/base.css?v=20260403-dark">
+    <link rel="stylesheet" href="css/modern.css?v=20260403-dark">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/manga.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="navbar-brand"><i class="fas fa-home"></i> MS-AI</a>
+        <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
+        <ul class="navbar-menu">
+            <li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li>
+            <li><a href="manga.html" class="active"><i class="fas fa-book"></i> المانجا</a></li>
+            <li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li>
+            <li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li>
+            <li><a href="history.html"><i class="fas fa-history"></i> السجل</a></li>
+            <li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li>
+        </ul>
+        <div class="navbar-right">
+            <button class="dark-mode-toggle"></button>
+            <button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
+            <a href="profile.html" class="navbar-user-badge" title="الملف الشخصي">
+                <span id="user-display-name">مستخدم</span>
+                <div class="navbar-user-avatar">US</div>
+            </a>
+        </div>
+    </nav>
+
+    <main class="page-shell">
+                <div class="manga-page-container">
+                    <!-- Hero Section -->
+                    <section class="hero-section">
+                        <div class="hero-content">
+                            <h1><i class="fas fa-book"></i> عالم المانجا</h1>
+                            <p>اكتشف أفضل المانجا العربية والعالمية</p>
+                        </div>
+                    </section>
+
+                    <!-- آخر التحديثات -->
+                    <section class="dashboard-section">
+                        <div class="section-header">
+                            <h2><i class="fas fa-clock"></i> آخر تحديثات المانجا</h2>
+                            <a href="library.html" class="section-link">عرض الكل</a>
+                        </div>
+                        <div id="recently-updated" class="horizontal-scroll">
+                            <!-- سيتم ملؤها بالجافا سكريبت -->
+                        </div>
+                    </section>
+
+                    <!-- الأكثر رواجاً -->
+                    <section class="dashboard-section">
+                        <div class="section-header">
+                            <h2><i class="fas fa-fire"></i> الأكثر رواجاً</h2>
+                            <div class="trending-tabs">
+                                <button class="tab-btn active" data-period="day">اليوم</button>
+                                <button class="tab-btn" data-period="week">هذا الأسبوع</button>
+                                <button class="tab-btn" data-period="month">هذا الشهر</button>
+                                <button class="tab-btn" data-period="all">الكل</button>
+                            </div>
+                        </div>
+                        <div id="trending" class="horizontal-scroll">
+                            <!-- سيتم ملؤها بالجافا سكريبت -->
+                        </div>
+                    </section>
+
+                    <!-- الأكثر متابعة -->
+                    <section class="dashboard-section">
+                        <div class="section-header">
+                            <h2><i class="fas fa-heart"></i> الأكثر متابعة</h2>
+                            <a href="library.html" class="section-link">عرض الكل</a>
+                        </div>
+                        <div id="most-followed" class="horizontal-scroll">
+                            <!-- سيتم ملؤها بالجافا سكريبت -->
+                        </div>
+                    </section>
+
+                    <!-- الأعلى تقييماً -->
+                    <section class="dashboard-section">
+                        <div class="section-header">
+                            <h2><i class="fas fa-star"></i> الأعلى تقييماً</h2>
+                            <a href="library.html" class="section-link">عرض الكل</a>
+                        </div>
+                        <div id="top-rated" class="horizontal-scroll">
+                            <!-- سيتم ملؤها بالجافا سكريبت -->
+                        </div>
+                    </section>
+
+                    <!-- رابط المكتبة -->
+                    <section class="dashboard-section">
+                        <div class="library-cta">
+                            <h3><i class="fas fa-book"></i> تصفح مكتبة المانجا</h3>
+                            <p>اكتشف آلاف المانجا المتنوعة في مكتبتنا</p>
+                            <a href="library.html" class="btn btn-primary">تصفح الآن</a>
+                        </div>
+                    </section>
+                </div>
+    </main>
+
+    <script src="js/config.js?v=20260401"></script>
+    <script src="js/auth.js?v=20260401"></script>
+    <script src="js/api.js?v=20260401"></script>
+    <script src="js/toast.js?v=20260401"></script>
+    <script src="js/common.js?v=20260401"></script>
+    <script src="js/dashboard-home.js?v=20260401"></script>
+</body>
+</html>

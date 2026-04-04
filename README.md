@@ -1,447 +1,321 @@
 # MS-AI Backend
 
-[![CI](https://github.com/your-org/ms-ai-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/ms-ai-backend/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/your-org/ms-ai-backend)](https://goreportcard.com/report/github.com/your-org/ms-ai-backend)
-[![codecov](https://codecov.io/gh/your-org/ms-ai-backend/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/ms-ai-backend)
+A modern, scalable manga reading platform backend built with Go, following Clean Architecture and Hexagonal Architecture principles.
 
-A production-ready, enterprise-grade manga management platform built with Go, featuring hexagonal architecture, comprehensive testing, and cloud-native deployment capabilities.
+## 🚀 Features
+
+- **User Authentication & Authorization** - JWT-based auth with refresh tokens
+- **Manga Management** - CRUD operations for manga and chapters
+- **Reading Progress Tracking** - Save and track reading progress
+- **Viewing History** - Track and manage viewing history
+- **Favorite Lists** - Create custom manga collections
+- **Ratings & Reviews** - Rate manga and chapters
+- **Comments System** - Comment on manga and chapters
+- **Admin Dashboard** - User and content management
+- **Hybrid Database** - MongoDB + PostgreSQL for optimal performance
+- **RESTful API** - Well-documented API endpoints
+- **Swagger Documentation** - Interactive API documentation
 
 ## 🏗️ Architecture
 
-This project follows **Hexagonal Architecture (Ports & Adapters)** with clear separation of concerns:
+This project follows **Clean Architecture** and **Hexagonal Architecture** principles:
 
 ```
-├── cmd/                    # Application entrypoints
-│   ├── server/            # HTTP server
-│   └── web/               # Static web files (HTML/CSS/JS)
-├── internal/              # Private application code
-│   ├── api/               # HTTP layer (controllers, DTOs, routing)
-│   │   ├── dto/          # Data Transfer Objects
-│   │   ├── handler/      # HTTP handlers
-│   │   ├── middleware/   # HTTP middleware
-│   │   └── router/       # Route definitions
-│   ├── core/             # Business logic (use cases, domain models)
-│   │   ├── admin/        # Admin business logic
-│   │   ├── auth/         # Authentication business logic
-│   │   ├── common/       # Shared business logic
-│   │   ├── content/      # Content-specific business logic
-│   │   └── user/         # User management business logic
-│   ├── data/             # Data access layer (repositories)
-│   │   ├── admin/        # Admin repositories (MongoDB + PostgreSQL)
-│   │   ├── common/       # Shared data models
-│   │   ├── content/      # Content data repositories
-│   │   ├── mongo/        # MongoDB connection and utilities
-│   │   ├── postgres/     # PostgreSQL connection and utilities
-│   │   └── user/         # User data repositories
-│   └── container/        # Dependency injection
-├── pkg/                  # Public packages
-│   ├── config/           # Configuration management
-│   ├── errors/           # Domain errors
-│   ├── jwt/              # JWT utilities
-│   ├── logger/           # Structured logging
-│   └── response/         # HTTP response helpers
-├── scripts/              # Utility scripts
-├── test/                 # Testing utilities
-└── docs/                 # Documentation
+┌─────────────────────────────────────────────────────────────┐
+│                     Presentation Layer                       │
+│  (HTTP Handlers, Routes, Middleware, Request/Response DTOs) │
+├─────────────────────────────────────────────────────────────┤
+│                    Application Layer                         │
+│        (Use Cases, Service Interfaces, Application DTOs)     │
+├─────────────────────────────────────────────────────────────┤
+│                      Domain Layer                            │
+│         (Entities, Business Rules, Repository Interfaces)    │
+├─────────────────────────────────────────────────────────────┤
+│                   Infrastructure Layer                       │
+│     (Repository Implementations, Database, External APIs)    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## ✨ Features
+### Directory Structure
 
-### 🔐 Authentication & Authorization
-- JWT-based authentication with refresh tokens
-- Invite-code registration system
-- Role-based access control (User, Admin, Moderator)
-- Secure password hashing with bcrypt
-- Rate limiting and brute-force protection
+```
+MS-AI/
+├── cmd/                        # Application entry points
+│   ├── server/                 # Main server
+│   ├── create_admin/           # Admin user creation utility
+│   ├── utils/                  # Utility commands
+│   └── web/                    # Static web assets
+│
+├── internal/                   # Private application code
+│   ├── domain/                 # Enterprise business rules
+│   │   ├── manga/              # Manga domain entities & interfaces
+│   │   └── user/               # User domain entities & interfaces
+│   │
+│   ├── application/            # Application business rules
+│   │   ├── interfaces/         # Service interfaces (ports)
+│   │   ├── dtos/               # Data transfer objects
+│   │   └── services/           # (Future: Use case implementations)
+│   │
+│   ├── core/                   # Business logic implementations
+│   │   ├── content/manga/      # Manga services
+│   │   ├── auth/               # Authentication service
+│   │   ├── admin/              # Admin service
+│   │   └── user/               # User domain logic
+│   │
+│   ├── infrastructure/         # Framework & driver implementations
+│   │   └── persistence/        # (Future: Database connections)
+│   │
+│   ├── data/                   # Data access layer
+│   │   ├── content/manga/      # Manga repositories
+│   │   ├── user/               # User repositories
+│   │   ├── admin/              # Admin repositories
+│   │   └── infrastructure/     # Database connections
+│   │       ├── mongo/          # MongoDB setup
+│   │       └── postgres/       # PostgreSQL setup
+│   │
+│   ├── api/                    # HTTP presentation layer
+│   │   ├── handler/            # HTTP request handlers
+│   │   ├── router/             # Route definitions
+│   │   ├── middleware/         # HTTP middleware
+│   │   └── dto/                # API-specific DTOs
+│   │
+│   ├── container/              # Dependency injection
+│   │   ├── container.go        # Main container
+│   │   ├── types.go            # Container types
+│   │   └── *_initializers.go   # Component initializers
+│   │
+│   └── delivery/               # (Future: Additional delivery mechanisms)
+│
+├── pkg/                        # Public utilities
+│   ├── config/                 # Configuration management
+│   ├── errors/                 # Common error types
+│   ├── i18n/                   # Internationalization
+│   ├── jwt/                    # JWT utilities
+│   ├── logger/                 # Logging utilities
+│   ├── response/               # Response helpers
+│   ├── utils/                  # General utilities
+│   └── validator/              # Input validation
+│
+├── docs/                       # Documentation
+│   ├── API.md                  # API reference
+│   ├── ARCHITECTURE.md         # Architecture documentation
+│   ├── DATABASE.md             # Database documentation
+│   ├── DEPLOYMENT.md           # Deployment guide
+│   ├── DEVELOPMENT.md          # Development guide
+│   └── TESTING.md              # Testing guide
+│
+├── scripts/                    # Utility scripts
+│   ├── init-mongo.js/          # MongoDB initialization
+│   ├── migrate_postgres.sql    # Database migrations
+│   └── seed.go                 # Data seeding
+│
+├── test/                       # Test utilities
+├── tools/                      # Development tools
+├── uploads/                    # File upload directory
+│
+├── docker-compose.yml          # Docker Compose configuration
+├── Dockerfile                  # Docker image definition
+├── go.mod                      # Go module definition
+├── Makefile                    # Build automation
+└── .env                        # Environment configuration
+```
 
-### 👥 Roles System
+## 🛠️ Tech Stack
 
-The application implements role-based access control with three roles:
+- **Language:** Go 1.24
+- **Framework:** Gin Web Framework
+- **Databases:**
+  - MongoDB (Document storage)
+  - PostgreSQL (Relational data)
+- **Authentication:** JWT (JSON Web Tokens)
+- **Validation:** go-playground/validator
+- **Logging:** rs/zerolog
+- **Configuration:** godotenv
 
-- **user**: Default role for new users. Basic content access.
-- **admin**: System administrator. Full access including user management.
-- **moderator**: Content moderator. Can manage manga and chapters.
+## 📋 Prerequisites
 
-Users start with `user` role and can be promoted by admins.
-
-### 📚 Manga Management
-- Complete manga metadata management
-- Chapter organization and storage
-- Tagging and categorization system
-- Search and filtering capabilities
-- Bulk operations support
-
-### 👥 User Management
-- User profiles and preferences
-- Admin dashboard for content management
-- User activity tracking
-- Account status management
-
-### 🛡️ Security
-- Input validation and sanitization
-- SQL injection prevention
-- XSS protection
-- CORS configuration
-- Security headers
-
-### 📊 Monitoring & Observability
-- Structured logging with correlation IDs
-- Health checks and readiness probes
-- Metrics collection (future)
-- Distributed tracing support (future)
-
-### 🧪 Testing
-- Unit tests with mocks
-- Integration tests with real database
-- API contract testing
-- Performance testing utilities
+- Go 1.24 or higher
+- MongoDB 6.0 or higher
+- PostgreSQL 15 or higher
+- Docker & Docker Compose (optional)
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Go 1.24+
-- MongoDB 6.0+
-- Docker & Docker Compose (recommended)
-
-### 1. Clone and Setup
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/ms-ai-backend.git
-cd ms-ai-backend
+git clone https://github.com/835-droid/ms-ai-backend.git
+cd ms-ai-backend/MS-AI
+```
 
-# Copy environment configuration
+### 2. Configure Environment
+
+```bash
 cp .env.example .env
-
-# Edit .env with your settings
-nano .env
+# Edit .env with your configuration
 ```
 
-### 2. Environment Configuration
-
-```env
-# Database
-MONGO_URI=mongodb://localhost:27017
-DB_NAME=MSAIDB
-
-# Server
-SERVER_PORT=8080
-ENVIRONMENT=development
-
-# Security (generate secure values)
-JWT_SECRET=$(openssl rand -hex 32)
-
-# CORS (update for your frontend)
-CORS_ORIGINS=http://localhost:3000,http://localhost:8080
-```
-
-### 3. Start Services
+### 3. Start Databases (Using Docker)
 
 ```bash
-# Start with Docker Compose (recommended)
 docker-compose up -d
-
-# Or start manually
-make build
-./bin/server
-
-# For development/testing without database
-DEV_NO_DB=1 ./bin/server
 ```
 
-### 4. Verify Installation
+### 4. Run Migrations
 
 ```bash
-# Health check
-curl http://localhost:8080/health
+# MongoDB indexes are created automatically
+# PostgreSQL migrations
+psql -U postgres -d ms_ai -f scripts/migrate_postgres.sql
+```
 
-# Access web interface (works even without database)
-open http://localhost:8080/web/index.html
+### 5. Build and Run
 
-# API documentation (requires database)
-open http://localhost:8080/docs
+```bash
+# Build
+go build -o ms-ai-server ./cmd/server
+
+# Run
+./ms-ai-server
+```
+
+Or use the Makefile:
+
+```bash
+make run
+```
+
+### 6. Create Admin User
+
+```bash
+go run ./cmd/create_admin
+```
+
+## 📚 API Documentation
+
+### Swagger Documentation
+
+The API is documented using Swagger annotations. To generate and view the Swagger UI:
+
+```bash
+# Install swag (if not installed)
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# Generate Swagger docs
+swag init -g cmd/server/main.go -o ./docs/swagger
+
+# Start server and visit http://localhost:8080/swagger/index.html
+```
+
+### API Reference
+
+See [docs/API_REFERENCE.md](docs/API_REFERENCE.md) for complete API documentation.
+
+### Base URL
+
+```
+http://localhost:8080/api/v1
 ```
 
 ## 🧪 Testing
 
 ```bash
 # Run all tests
-make test
-
-# Run with coverage
-make test-coverage
-
-# Run integration tests
-make test-integration
-
-# Run specific test
-go test ./internal/core/auth -v -run TestSignUp
-```
-
-## 📦 Build & Deployment
-
-### Local Development
-
-```bash
-# Build
-make build
-
-# Run
-./bin/server
-
-# Development with hot reload
-make dev
-```
-
-### Docker
-
-```bash
-# Build image
-docker build -t ms-ai-backend .
-
-# Run with Docker Compose
-docker-compose up -d
-
-# Run specific services
-docker-compose up -d mongodb app
-```
-
-### Production Deployment
-
-```bash
-# Build optimized binary
-make build-prod
-
-# Deploy with docker-compose.prod.yml
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-## 🔧 Development
-
-### Code Quality
-
-```bash
-# Format code
-make fmt
-
-# Lint code
-make lint
-
-# Run security checks
-make security
-
-# Pre-commit checks
-make check
-```
-
-### Database Operations
-
-```bash
-# Create invite code
-go run cmd/utils/gen_invite.go
-
-# Run migrations
-go run cmd/migrations/migrate.go up
-
-# Seed database
-go run cmd/utils/seed.go
-```
-
-### API Documentation
-
-- **Swagger/OpenAPI**: `http://localhost:8080/swagger/`
-- **API Reference**: See [docs/API.md](docs/API.md)
-- **Architecture**: See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-
-## 📊 Monitoring
-
-### Health Checks
-
-```bash
-# Application health
-GET /health
-
-# Database connectivity
-GET /ready
-
-# Metrics (future)
-GET /metrics
-```
-
-### Logs
-
-```bash
-# Structured JSON logs
-tail -f server.log
-
-# Filter by level
-jq 'select(.level == "error")' server.log
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Write tests for your changes
-4. Ensure all tests pass: `make test`
-5. Commit your changes: `git commit -m 'Add amazing feature'`
-6. Push to the branch: `git push origin feature/amazing-feature`
-7. Open a Pull Request
-
-### Development Guidelines
-
-- Follow Go best practices and effective Go guidelines
-- Write comprehensive tests for new features
-- Update documentation for API changes
-- Ensure code passes all CI checks
-- Use conventional commit messages
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with [Gin](https://gin-gonic.com/) web framework
-- Database operations with [MongoDB Go Driver](https://github.com/mongodb/mongo-go-driver)
-- Authentication with [JWT](https://github.com/golang-jwt/jwt)
-- Logging with [Zerolog](https://github.com/rs/zerolog)
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/your-org/ms-ai-backend/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/ms-ai-backend/discussions)
-- **Documentation**: [docs/](docs/)
-   mongod
-   ```
-
-4. **Build and run**:
-   ```bash
-   make build
-   make run
-   ```
-
-5. **Access the application**:
-   - Open `http://localhost:8080` in your browser
-   - Register using an invite code (generate from admin panel)
-
-## API Documentation
-
-Complete API documentation is available in [`docs/API.md`](docs/API.md).
-
-### Key Endpoints
-
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User authentication
-- `GET /api/mangas` - List manga
-- `POST /api/mangas` - Create manga
-- `GET /api/mangas/{id}/chapters` - Get chapters
-- `POST /api/mangas/{id}/chapters` - Add chapter
-
-## Project Structure
-
-```
-├── cmd/
-│   ├── server/          # Main application entry point
-│   └── web/            # Static web files
-├── internal/
-│   ├── api/            # HTTP handlers and routing
-│   ├── core/           # Business logic services
-│   ├── data/           # Data repositories
-│   └── pkg/            # Shared utilities
-├── docs/               # Documentation
-└── scripts/            # Database seeding and utilities
-```
-
-## Development
-
-### Available Commands
-
-```bash
-make build      # Build the application
-make run        # Run the application
-make test       # Run tests
-make clean      # Clean build artifacts
-make docker     # Build Docker image
-```
-
-### Database Seeding
-
-To populate the database with sample data:
-
-```bash
-go run scripts/seed.go
-```
-
-### Testing
-
-```bash
 go test ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run specific test file
+go test ./internal/domain/manga/...
 ```
 
-## Deployment
-
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for detailed deployment instructions.
+## 📦 Deployment
 
 ### Docker Deployment
 
 ```bash
-docker build -t ms-ai .
-docker run -p 8080:8080 --env-file .env ms-ai
+# Build Docker image
+docker build -t ms-ai-backend .
+
+# Run with Docker Compose
+docker-compose up -d
 ```
 
-## Configuration
+### Production Deployment
 
-### Environment Variables
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
+
+## 🔧 Configuration
+
+Configuration is managed through environment variables. See `.env.example` for all available options:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | Server port | `8080` |
-| `DB_TYPE` | Database type (mongo/postgres/hybrid) | `mongo` |
-| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/msai` |
-| `POSTGRES_DSN` | PostgreSQL connection string | |
-| `JWT_SECRET` | JWT signing secret | Required |
-| `JWT_ACCESS_EXPIRY` | Access token expiry | `15m` |
-| `JWT_REFRESH_EXPIRY` | Refresh token expiry | `168h` |
-| `CORS_ORIGINS` | Allowed CORS origins | `http://localhost:8080` |
+| `SERVER_PORT` | Server port | `8080` |
+| `ENVIRONMENT` | Environment (development/production) | `development` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017` |
+| `POSTGRES_URI` | PostgreSQL connection string | `postgres://localhost:5432/ms_ai` |
+| `JWT_SECRET` | JWT signing secret | (required) |
+| `LOG_LEVEL` | Logging level | `info` |
 
-## Troubleshooting
+## 🏛️ Architecture Decisions
 
-### Common Issues
+### Why Clean Architecture?
 
-- **CORS errors**: Check `CORS_ORIGINS` in your `.env` file
-- **Database connection**: Ensure MongoDB is running and accessible
-- **JWT errors**: Verify `JWT_SECRET` is set and consistent
-- **WebSocket issues**: Check CORS settings for WebSocket connections
+1. **Testability** - Business logic can be tested without UI, DB, or external services
+2. **Maintainability** - Clear separation of concerns makes code easier to understand
+3. **Flexibility** - Easy to swap implementations (e.g., change database)
+4. **Scalability** - Well-organized codebase scales better with team size
 
-### Logs
+### Why Hybrid Database?
 
-The application uses structured logging. Check the console output for detailed error information.
+- **MongoDB** - Flexible schema for manga content, chapters, and user-generated content
+- **PostgreSQL** - ACID compliance for transactions, favorites lists, and relational data
 
-## Contributing
+### Dependency Injection
+
+The project uses a custom DI container (`internal/container/`) for:
+- Loose coupling between components
+- Easy testing with mock implementations
+- Centralized configuration
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## License
+### Development Guidelines
+
+- Follow Go best practices
+- Write tests for new features
+- Update documentation
+- Use meaningful commit messages
+
+## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-API Endpoints
-- POST /api/auth/signup
-- POST /api/auth/login
-- POST /api/auth/refresh
-- POST /api/auth/logout
-- POST /api/admin/invite (admin only)
-- GET /api/admin/invites (admin only)
-- DELETE /api/admin/invite/:id (admin only)
-- **GET /api/chat/ws (auth required, WebSocket)**
-- **GET /api/chat/history (auth required)**
-- **GET /api/chat/users (auth required)**
-- GET /livez
-- GET /readyz
+## 👥 Authors
 
-See `docs/API.md` for full API details and `docs/DEPLOYMENT.md` for deployment instructions.
+- **835-droid** - Initial work
+
+## 🙏 Acknowledgments
+
+- Gin Web Framework team
+- MongoDB team
+- PostgreSQL team
+- All open-source contributors
+
+## 📞 Support
+
+- **Documentation:** [docs/](docs/)
+- **API Reference:** [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
+- **Issues:** [GitHub Issues](https://github.com/835-droid/ms-ai-backend/issues)
+
+---
+
+**Built with ❤️ using Go and Clean Architecture**

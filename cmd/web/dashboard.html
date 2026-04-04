@@ -4,24 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MS-AI | الرئيسية</title>
-    <link rel="stylesheet" href="css/base.css?v=20260403-dark">
-    <link rel="stylesheet" href="css/modern.css?v=20260403-dark">
+    <link rel="stylesheet" href="css/base.css?v=20260404-dark">
+    <link rel="stylesheet" href="css/modern.css?v=20260404-dark">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/manga.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260404">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 3rem 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: white;
+            box-shadow: 0 10px 40px rgba(124, 58, 237, 0.3);
+        }
+        .hero-section h1 { font-size: 2.5rem; margin-bottom: 0.5rem; color: white; }
+        .hero-section p { font-size: 1.1rem; opacity: 0.9; }
+        .quick-links { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+        .quick-link {
+            background: var(--card-bg); padding: 1.5rem; border-radius: 16px;
+            text-align: center; text-decoration: none; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .quick-link:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .quick-link i { font-size: 2rem; color: var(--primary-color); margin-bottom: 0.5rem; display: block; }
+        .quick-link span { color: var(--text-primary); font-weight: 600; }
+        @media (max-width: 768px) { .quick-links { grid-template-columns: repeat(2, 1fr); } }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <a href="dashboard.html" class="navbar-brand"><i class="fas fa-home"></i> MS-AI</a>
         <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
         <ul class="navbar-menu">
-            <li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li>
-            <li><a href="library.html"><i class="fas fa-book"></i> المكتبة</a></li>
+            <li><a href="dashboard.html" class="active"><i class="fas fa-home"></i> الرئيسية</a></li>
+            <li><a href="library.html"><i class="fas fa-th-large"></i> المكتبة</a></li>
             <li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li>
             <li><a href="history.html"><i class="fas fa-history"></i> السجل</a></li>
-            <li><a href="https://discord.gg/6tTdAh4JVd" target="_blank" rel="noopener noreferrer"><i class="fab fa-discord"></i> ديسكورد</a></li>
         </ul>
         <div class="navbar-right">
             <button class="dark-mode-toggle"></button>
@@ -34,72 +57,112 @@
     </nav>
 
     <main class="page-shell">
-        <div class="dashboard-container">
-            <!-- آخر التحديثات -->
-            <section class="dashboard-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-clock"></i> آخر التحديثات</h2>
-                    <a href="library.html" class="section-link">عرض الكل</a>
-                </div>
-                <div id="recently-updated" class="horizontal-scroll">
-                    <!-- سيتم ملؤها بالجافا سكريبت -->
-                </div>
-            </section>
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h1><i class="fas fa-home"></i> مرحباً بك في MS-AI</h1>
+            <p>بوابتك إلى عالم المانجا والروايات</p>
+        </section>
 
-            <!-- الأكثر رواجاً -->
-            <section class="dashboard-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-fire"></i> الأكثر رواجاً</h2>
-                    <div class="trending-tabs">
-                        <button class="tab-btn active" data-period="day">اليوم</button>
-                        <button class="tab-btn" data-period="week">هذا الأسبوع</button>
-                        <button class="tab-btn" data-period="month">هذا الشهر</button>
-                        <button class="tab-btn" data-period="all">الكل</button>
+        <!-- Quick Links -->
+        <div class="quick-links">
+            <a href="manga.html" class="quick-link">
+                <i class="fas fa-book"></i><span>المانجا</span>
+            </a>
+            <a href="novels.html" class="quick-link">
+                <i class="fas fa-scroll"></i><span>الروايات</span>
+            </a>
+            <a href="library.html" class="quick-link">
+                <i class="fas fa-th-large"></i><span>المكتبة</span>
+            </a>
+            <a href="favorites.html" class="quick-link">
+                <i class="fas fa-heart"></i><span>المفضلة</span>
+            </a>
+        </div>
+
+        <div class="dashboard-split">
+            <!-- Manga Column -->
+            <div class="dashboard-column manga-column">
+                <div class="column-header">
+                    <div class="icon"><i class="fas fa-book"></i></div>
+                    <h2>عالم المانجا</h2>
+                    <p>اكتشف أفضل المانجا العربية والعالمية</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-number" id="manga-total">0</div>
+                        <div class="stat-label">مانجا</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="manga-chapters">0</div>
+                        <div class="stat-label">فصل</div>
                     </div>
                 </div>
-                <div id="trending" class="horizontal-scroll">
-                    <!-- سيتم ملؤها بالجافا سكريبت -->
-                </div>
-            </section>
 
-            <!-- الأكثر متابعة -->
-            <section class="dashboard-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-heart"></i> الأكثر متابعة</h2>
-                    <a href="library.html" class="section-link">عرض الكل</a>
+                <!-- Latest Updates -->
+                <div class="section-card">
+                    <h3><i class="fas fa-clock"></i> آخر التحديثات</h3>
+                    <div id="manga-latest" class="mini-grid"></div>
+                    <a href="manga.html" class="view-all-link">عرض كل المانجا <i class="fas fa-arrow-left"></i></a>
                 </div>
-                <div id="most-followed" class="horizontal-scroll">
-                    <!-- سيتم ملؤها بالجافا سكريبت -->
-                </div>
-            </section>
 
-            <!-- الأعلى تقييماً -->
-            <section class="dashboard-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-star"></i> الأعلى تقييماً</h2>
-                    <a href="library.html" class="section-link">عرض الكل</a>
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <a href="manga.html" class="action-btn">
+                        <i class="fas fa-book"></i><span>تصفح المانجا</span>
+                    </a>
+                    <a href="library.html" class="action-btn">
+                        <i class="fas fa-th-large"></i><span>المكتبة</span>
+                    </a>
                 </div>
-                <div id="top-rated" class="horizontal-scroll">
-                    <!-- سيتم ملؤها بالجافا سكريبت -->
-                </div>
-            </section>
+            </div>
 
-            <!-- رابط المكتبة -->
-            <section class="dashboard-section">
-                <div class="library-cta">
-                    <h3><i class="fas fa-book"></i> تصفح المكتبة</h3>
-                    <p>اكتشف آلاف المانجا المتنوعة في مكتبتنا</p>
-                    <a href="library.html" class="btn btn-primary">تصفح الآن</a>
+            <!-- Novel Column -->
+            <div class="dashboard-column novel-column">
+                <div class="column-header">
+                    <div class="icon"><i class="fas fa-scroll"></i></div>
+                    <h2>عالم الروايات</h2>
+                    <p>اكتشف أفضل الروايات العربية والعالمية</p>
                 </div>
-            </section>
+
+                <!-- Stats -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-number" id="novel-total">0</div>
+                        <div class="stat-label">رواية</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="novel-chapters">0</div>
+                        <div class="stat-label">فصل</div>
+                    </div>
+                </div>
+
+                <!-- Latest Updates -->
+                <div class="section-card">
+                    <h3><i class="fas fa-clock"></i> آخر التحديثات</h3>
+                    <div id="novel-latest" class="mini-grid"></div>
+                    <a href="novels.html" class="view-all-link">عرض كل الروايات <i class="fas fa-arrow-left"></i></a>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <a href="novels.html" class="action-btn">
+                        <i class="fas fa-scroll"></i><span>تصفح الروايات</span>
+                    </a>
+                    <a href="novel-library.html" class="action-btn">
+                        <i class="fas fa-star"></i><span>مكتبة الروايات</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </main>
 
-    <script src="js/config.js?v=20260401"></script>
-    <script src="js/auth.js?v=20260401"></script>
-    <script src="js/api.js?v=20260401"></script>
-    <script src="js/toast.js?v=20260401"></script>
-    <script src="js/common.js?v=20260401"></script>
-    <script src="js/dashboard-home.js?v=20260401"></script>
+    <script src="js/config.js?v=20260404"></script>
+    <script src="js/auth.js?v=20260404"></script>
+    <script src="js/api.js?v=20260404"></script>
+    <script src="js/toast.js?v=20260404"></script>
+    <script src="js/common.js?v=20260404"></script>
+    <script src="js/dashboard.js?v=20260404"></script>
 </body>
 </html>

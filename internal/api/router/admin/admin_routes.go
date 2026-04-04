@@ -32,6 +32,7 @@ func SetupAdminRoutes(engine *gin.Engine, adminHandler *admin.Handler, cfg *conf
 
 		adminGroup.GET("/users", adminHandler.ListUsers)
 		adminGroup.PUT("/users/:id/promote", adminHandler.PromoteUser)
+		adminGroup.PUT("/users/:id/demote", adminHandler.DemoteUser)
 		adminGroup.PUT("/users/:id/deactivate", adminHandler.DeactivateUser)
 		adminGroup.DELETE("/users/:id", adminHandler.DeleteUser)
 	}

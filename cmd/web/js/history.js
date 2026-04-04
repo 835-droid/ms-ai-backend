@@ -7,7 +7,7 @@ let limit = 20;
 // ========== API Helpers ==========
 async function fetchHistory(page = 1, limitVal = limit) {
     try {
-        const data = await apiFetch(`/api/mangas/history?page=${page}&limit=${limitVal}`);
+        const data = await apiFetch(`/mangas/history?page=${page}&limit=${limitVal}`);
         return data;
     } catch (error) {
         console.error('Failed to fetch history:', error);
@@ -17,7 +17,7 @@ async function fetchHistory(page = 1, limitVal = limit) {
 
 async function fetchStats() {
     try {
-        const data = await apiFetch('/api/mangas/history/stats');
+        const data = await apiFetch('/mangas/history/stats');
         return data;
     } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -27,7 +27,7 @@ async function fetchStats() {
 
 async function deleteHistoryItem(id) {
     try {
-        await apiFetch(`/api/mangas/history/${encodeURIComponent(id)}`, {
+        await apiFetch(`/mangas/history/${encodeURIComponent(id)}`, {
             method: 'DELETE'
         });
         return true;
@@ -39,7 +39,7 @@ async function deleteHistoryItem(id) {
 
 async function cleanOldHistory(days = 90) {
     try {
-        const data = await apiFetch(`/api/mangas/history/clean?days=${days}`, {
+        const data = await apiFetch(`/mangas/history/clean?days=${days}`, {
             method: 'DELETE'
         });
         return data;

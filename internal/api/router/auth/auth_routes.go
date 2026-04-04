@@ -21,6 +21,7 @@ func SetupAuthRoutes(engine *gin.Engine, authHandler *auth.Handler, cfg *config.
 		auth.POST("/refresh", authHandler.RefreshToken)
 		auth.POST("/logout", middleware.AuthMiddleware(cfg, userRepo), authHandler.Logout)
 		auth.PUT("/password", middleware.AuthMiddleware(cfg, userRepo), authHandler.ChangePassword)
+		auth.POST("/delete-account", middleware.AuthMiddleware(cfg, userRepo), authHandler.DeleteAccount)
 		auth.GET("/verify", middleware.AuthMiddleware(cfg, userRepo), func(c *gin.Context) {
 			c.JSON(200, gin.H{"status": "authenticated"})
 		})

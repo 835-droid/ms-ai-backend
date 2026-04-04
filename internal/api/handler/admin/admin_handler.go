@@ -150,4 +150,19 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	response.SuccessResp(c, http.StatusOK, gin.H{"message": i18n.TContext(c, i18n.MsgUserProfileUpdated)})
 }
 
+func (h *Handler) DemoteUser(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationRequired))
+		return
+	}
+
+	if err := h.service.DemoteToUser(c.Request.Context(), userID); err != nil {
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+		return
+	}
+
+	response.SuccessResp(c, http.StatusOK, gin.H{"message": i18n.TContext(c, i18n.MsgUserProfileUpdated)})
+}
+
 // ----- END OF FILE: backend/MS-AI/internal/api/handler/admin/admin_handler.go -----

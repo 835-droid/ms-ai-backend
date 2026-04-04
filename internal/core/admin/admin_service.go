@@ -174,6 +174,15 @@ func (s *DefaultAdminService) PromoteToAdmin(ctx context.Context, userID string)
 	return s.userRepo.UpdateUserRole(ctx, oid, user.RoleAdmin, true)
 }
 
+// DemoteToUser demotes an admin to regular user role
+func (s *DefaultAdminService) DemoteToUser(ctx context.Context, userID string) error {
+	oid, err := primitive.ObjectIDFromHex(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+	return s.userRepo.UpdateUserRole(ctx, oid, user.RoleAdmin, false)
+}
+
 func (s *DefaultAdminService) DeactivateUser(ctx context.Context, userID string) error {
 	oid, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {

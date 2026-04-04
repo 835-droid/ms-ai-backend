@@ -192,6 +192,28 @@ async function handleLikeToggleEnhanced() {
 }
 
 // ========== التقييم بالنجوم (مثل السابق) ==========
+function renderStatusBadge() {
+    const coverContainer = document.querySelector('.manga-cover-wrapper');
+    if (!coverContainer || !currentManga) return;
+
+    // Remove existing badge if any
+    const existingBadge = coverContainer.querySelector('.status-badge-overlay');
+    if (existingBadge) existingBadge.remove();
+
+    const status = currentManga.status || 'ongoing';
+    const statusTexts = {
+        'ongoing': 'مستمرة',
+        'completed': 'مكتملة',
+        'hiatus': 'متوقفة',
+        'published': 'منشورة'
+    };
+
+    const badge = document.createElement('div');
+    badge.className = `status-badge-overlay status-${status}`;
+    badge.textContent = statusTexts[status] || status;
+    coverContainer.appendChild(badge);
+}
+
 function renderStars(ratingValue, interactive = false) {
     // Keep read-only rating display; chapter-level ratings are 1-10.
     const container = document.getElementById('stars-container');
@@ -453,6 +475,9 @@ async function renderMangaDetails() {
     if (!container || !currentManga) return;
     const cover = currentManga.cover_image || '';
     galleryImages = [cover, ...(currentManga.gallery || [])].filter(Boolean);
+
+    // Add status badge rendering
+    renderStatusBadge();
     
     // استخدم حالة محايدة أولاً حتى لا يكون هناك Promise غير محلول في الواجهة
     let initialFavState = false;
@@ -1350,7 +1375,7 @@ async function openAddToListModal() {
 
     try {
         // جلب قوائم المستخدم
-        const response = await apiFetch('/api/mangas/lists');
+        const response = await apiFetch('/mangas/lists');
         const lists = response.data || [];
 
         // جلب القوائم التي تحتوي على هذه المانجا بالفعل

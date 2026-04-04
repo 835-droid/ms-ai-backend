@@ -5,6 +5,7 @@ import (
 	coreadmin "github.com/835-droid/ms-ai-backend/internal/core/admin"
 	coreauth "github.com/835-droid/ms-ai-backend/internal/core/auth"
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
+	corenovel "github.com/835-droid/ms-ai-backend/internal/core/content/novel"
 	admindata "github.com/835-droid/ms-ai-backend/internal/data/admin"
 	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
 	pginfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
@@ -53,6 +54,12 @@ func initializeServices(cfg *config.Config, log *logger.Logger, repos *RepoBundl
 		viewingHistorySvc = coremanga.NewViewingHistoryService(repos.ViewingHistory, repos.Manga)
 	}
 
+	// Novel service - requires Novel repo (from MongoDB)
+	var novelSvc corenovel.NovelService
+	if repos.Novel != nil {
+		novelSvc = corenovel.NewNovelService(repos.Novel, log)
+	}
+
 	return &serviceBundle{
 		Auth:           coreauth.NewAuthService(repos.User, cfg, log.GetZerologLogger()),
 		Admin:          adminSvc,
@@ -60,5 +67,6 @@ func initializeServices(cfg *config.Config, log *logger.Logger, repos *RepoBundl
 		FavList:        favListSvc,
 		Chapter:        chapterSvc,
 		ViewingHistory: viewingHistorySvc,
+		Novel:          novelSvc,
 	}
 }

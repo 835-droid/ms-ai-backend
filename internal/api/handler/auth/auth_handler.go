@@ -266,4 +266,53 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	response.SuccessResp(c, http.StatusOK, gin.H{"message": "تم تغيير كلمة المرور بنجاح"})
 }
 
+// DeleteAccount handles user account deletion
+// @Summary Delete user account
+// @Description Permanently delete the authenticated user's account
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response
+// @Failure 401 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /auth/delete-account [post]
+// @Security BearerAuth
+func (h *Handler) DeleteAccount(c *gin.Context) {
+	v, ok := c.Get("user_id")
+	if !ok {
+		response.Unauthorized(c, i18n.TContext(c, i18n.MsgAuthAccessDenied))
+		return
+	}
+	uidStr, ok := v.(string)
+	if !ok {
+		response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+		return
+	}
+
+	id, err := primitive.ObjectIDFromHex(uidStr)
+	if err != nil {
+		response.ValidationError(c, i18n.TContext(c, i18n.MsgValidationInvalidFormat))
+		return
+	}
+
+	// Delete the user account
+	if err := h.Service.DeleteUser(c.Request.Context(), id); err != nil {
+		switch {
+		case errors.Is(err, core.ErrUserNotFound):
+			response.Unauthorized(c, i18n.TContext(c, i18n.MsgUserNotFound))
+			return
+		default:
+			response.InternalError(c, i18n.TContext(c, i18n.MsgSystemInternalError))
+			return
+		}
+	}
+
+	// Clear any session cookies
+	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+
+	response.SuccessResp(c, http.StatusOK, gin.H{
+		"message": i18n.TContext(c, i18n.MsgAuthLogoutSuccess),
+	})
+}
+
 // ----- END OF FILE: backend/MS-AI/internal/api/handler/auth/auth_handler.go -----

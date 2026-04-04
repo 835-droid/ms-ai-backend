@@ -11,6 +11,7 @@ let tagList = [];
 let editTagList = [];
 let currentEditMangaId = '';
 let uploadedFiles = [];
+let novelTagList = [];
 
 // ========== Utility Functions ==========
 function escapeHtml(text) {
@@ -282,6 +283,36 @@ function resetAddMangaForm() {
     tagList = [];
     renderTags();
     document.getElementById('cover-preview').innerHTML = '';
+}
+
+function resetAddNovelForm() {
+    document.getElementById('add-novel-form').reset();
+    novelTagList = [];
+    renderNovelTags();
+    document.getElementById('novel-cover-preview').innerHTML = '';
+}
+
+function renderNovelTags() {
+    const container = document.getElementById('novel-tags-container');
+    if (!container) return;
+    container.innerHTML = novelTagList.map(tag => `
+        <span class="tag-item">
+            ${escapeHtml(tag)}
+            <button type="button" onclick="removeNovelTag('${escapeHtml(tag)}')">×</button>
+        </span>
+    `).join('');
+}
+
+function addNovelTag(tag) {
+    const cleaned = String(tag || '').trim();
+    if (!cleaned || novelTagList.includes(cleaned)) return;
+    novelTagList.push(cleaned);
+    renderNovelTags();
+}
+
+function removeNovelTag(tag) {
+    novelTagList = novelTagList.filter(t => t !== tag);
+    renderNovelTags();
 }
 
 // ========== Tags Management ==========
@@ -593,13 +624,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Batch Delete
     document.getElementById('batch-delete-btn')?.addEventListener('click', batchDeleteMangas);
 
-    // Tags Input
+    // Manga Tags Input
     document.getElementById('manga-tags-input')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             const input = e.target;
             const tags = input.value.split(',').map(t => t.trim()).filter(Boolean);
             tags.forEach(tag => addTag(tag));
+            input.value = '';
+        }
+    });
+
+    // Novel Tags Input
+    document.getElementById('novel-tags-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const input = e.target;
+            const tags = input.value.split(',').map(t => t.trim()).filter(Boolean);
+            tags.forEach(tag => addNovelTag(tag));
             input.value = '';
         }
     });
@@ -627,6 +669,33 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('تمت إضافة المانجا بنجاح', 'success');
             resetAddMangaForm();
             switchSection('mangas');
+        } catch (error) {
+            showToast(error.message || 'فشل الإضافة', 'error');
+        }
+    });
+
+    // Add Novel Form
+    document.getElementById('add-novel-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const novelData = {
+            title: document.getElementById('novel-title').value,
+            description: document.getElementById('novel-description').value,
+            author_id: document.getElementById('novel-author').value,
+            cover_image: document.getElementById('novel-cover-url').value,
+            status: document.getElementById('novel-status').value,
+            tags: novelTagList,
+            categories: Array.from(document.getElementById('novel-categories').selectedOptions).map(o => o.value)
+        };
+
+        try {
+            await apiFetch('/novels', {
+                method: 'POST',
+                body: JSON.stringify(novelData)
+            });
+            showToast('تمت إضافة الرواية بنجاح', 'success');
+            resetAddNovelForm();
+            switchSection('novels');
         } catch (error) {
             showToast(error.message || 'فشل الإضافة', 'error');
         }
@@ -745,7 +814,169 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial load
     loadDashboard();
+    loadUsers();
 });
+
+// ========== Users Management ==========
+async function loadUsers() {
+    const container = document.getElementById('users-list-container');
+    if (!container) return;
+
+    try {
+        const data = await apiFetch('/admin/users?page=1&limit=50');
+        const users = data.users || [];
+
+        if (users.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>لا يوجد مستخدمين</p></div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>المستخدم</th>
+                        <th>الرتبة</th>
+                        <th>الحالة</th>
+                        <th>تاريخ التسجيل</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${users.map(user => `
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <div class="user-avatar" style="width: 36px; height: 36px; border-radius: 50%; background: var(--admin-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.875rem;">
+                                        ${(user.username || 'U').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600;">${escapeHtml(user.username || 'مستخدم')}</div>
+                                        <div style="font-size: 0.75rem; color: var(--admin-text-muted);">ID: ${user.id}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="role-badge ${user.roles?.includes('admin') ? 'role-admin' : 'role-user'}">
+                                    ${user.roles?.includes('admin') ? '👑 مشرف' : '👤 مستخدم'}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge status-${user.is_active !== false ? 'published' : 'draft'}">
+                                    ${user.is_active !== false ? 'نشط' : 'غير نشط'}
+                                </span>
+                            </td>
+                            <td style="direction: ltr; text-align: right;">
+                                ${new Date(user.created_at).toLocaleDateString('ar-SA')}
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    ${user.roles?.includes('admin') ? `
+                                        <button class="btn btn-sm btn-warning" onclick="demoteUser('${user.id}')" title="تخفيض الرتبة">
+                                            <i class="fas fa-user-minus"></i>
+                                        </button>
+                                    ` : `
+                                        <button class="btn btn-sm btn-success" onclick="promoteUser('${user.id}')" title="ترقية لمشرف">
+                                            <i class="fas fa-user-plus"></i>
+                                        </button>
+                                    `}
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser('${user.id}')" title="حذف المستخدم">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        // Add CSS for admin table
+        if (!document.getElementById('admin-table-styles')) {
+            const style = document.createElement('style');
+            style.id = 'admin-table-styles';
+            style.textContent = `
+                .admin-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 12px;
+                    overflow: hidden;
+                }
+                .admin-table th, .admin-table td {
+                    padding: 1rem;
+                    text-align: right;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                .admin-table th {
+                    background: rgba(124, 58, 237, 0.2);
+                    font-weight: 600;
+                    color: var(--admin-text);
+                }
+                .admin-table tr:hover {
+                    background: rgba(124, 58, 237, 0.1);
+                }
+                .role-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                    padding: 0.25rem 0.75rem;
+                    border-radius: 20px;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                }
+                .role-admin {
+                    background: rgba(234, 179, 8, 0.2);
+                    color: #fbbf24;
+                }
+                .role-user {
+                    background: rgba(156, 163, 175, 0.2);
+                    color: #9ca3af;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    } catch (error) {
+        console.error('Failed to load users:', error);
+        container.innerHTML = '<div class="error-state"><p>فشل تحميل المستخدمين</p></div>';
+    }
+}
+
+async function promoteUser(userId) {
+    if (!confirm('هل أنت متأكد من ترقية هذا المستخدم إلى مشرف؟')) return;
+
+    try {
+        await apiFetch(`/admin/users/${encodeURIComponent(userId)}/promote`, { method: 'PUT' });
+        showToast('تم ترقية المستخدم إلى مشرف', 'success');
+        loadUsers();
+    } catch (error) {
+        showToast(error.message || 'فشل الترقية', 'error');
+    }
+}
+
+async function demoteUser(userId) {
+    if (!confirm('هل أنت متأكد من تخفيض رتبة هذا المشرف إلى مستخدم عادي؟')) return;
+
+    try {
+        await apiFetch(`/admin/users/${encodeURIComponent(userId)}/demote`, { method: 'PUT' });
+        showToast('تم تخفيض رتبة المستخدم', 'success');
+        loadUsers();
+    } catch (error) {
+        showToast(error.message || 'فشل التخفيض', 'error');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟ هذا الإجراء لا يمكن التراجع عنه.')) return;
+
+    try {
+        await apiFetch(`/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+        showToast('تم حذف المستخدم', 'success');
+        loadUsers();
+    } catch (error) {
+        showToast(error.message || 'فشل الحذف', 'error');
+    }
+}
 
 // ========== Bulk Upload ==========
 async function handleBulkUpload(e) {
@@ -803,7 +1034,9 @@ async function handleBulkUpload(e) {
 window.switchSection = switchSection;
 window.exportData = exportData;
 window.resetAddMangaForm = resetAddMangaForm;
+window.resetAddNovelForm = resetAddNovelForm;
 window.openEditMangaModal = openEditMangaModal;
 window.deleteManga = deleteManga;
 window.deleteChapter = deleteChapter;
 window.goToPage = goToPage;
+window.removeNovelTag = removeNovelTag;

@@ -3,10 +3,12 @@ package handler
 
 import (
 	"github.com/835-droid/ms-ai-backend/internal/api/handler/content/manga"
+	"github.com/835-droid/ms-ai-backend/internal/api/handler/content/novel"
 	"github.com/835-droid/ms-ai-backend/internal/api/handler/health"
 	coreadmin "github.com/835-droid/ms-ai-backend/internal/core/admin"
 	coreauth "github.com/835-droid/ms-ai-backend/internal/core/auth"
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
+	corenovel "github.com/835-droid/ms-ai-backend/internal/core/content/novel"
 	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
 	pginfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 )
@@ -19,6 +21,7 @@ type Container struct {
 	MangaHandler          *MangaHandler
 	MangaChapterHandler   *MangaChapterHandler
 	ViewingHistoryHandler *manga.ViewingHistoryHandler
+	NovelHandler          *novel.NovelHandler
 }
 
 func NewContainer(
@@ -28,6 +31,7 @@ func NewContainer(
 	mangaChapterService coremanga.MangaChapterService,
 	adminService coreadmin.Service,
 	viewingHistoryService coremanga.ViewingHistoryService,
+	novelService corenovel.NovelService,
 	mongoStore *mongoinfra.MongoStore,
 	postgresStore *pginfra.PostgresStore,
 ) *Container {
@@ -50,6 +54,11 @@ func NewContainer(
 		viewingHistoryHandler = manga.NewViewingHistoryHandler(viewingHistoryService, mangaService)
 	}
 
+	var novelHandler *novel.NovelHandler
+	if novelService != nil {
+		novelHandler = novel.NewNovelHandler(novelService)
+	}
+
 	return &Container{
 		AuthHandler:           NewAuthHandler(authService),
 		AdminHandler:          adminHandler,
@@ -57,6 +66,7 @@ func NewContainer(
 		MangaHandler:          mangaHandler,
 		MangaChapterHandler:   chapterHandler,
 		ViewingHistoryHandler: viewingHistoryHandler,
+		NovelHandler:          novelHandler,
 	}
 }
 

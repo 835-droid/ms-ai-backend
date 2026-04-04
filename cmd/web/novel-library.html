@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS-AI | مكتبة الروايات</title>
+    <link rel="stylesheet" href="css/base.css?v=20260404-dark">
+    <link rel="stylesheet" href="css/modern.css?v=20260404-dark">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/manga.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="dashboard.html" class="navbar-brand"><i class="fas fa-home"></i> MS-AI</a>
+        <button class="navbar-toggle" title="تبديل القائمة"><i class="fas fa-bars"></i></button>
+        <ul class="navbar-menu">
+            <li><a href="dashboard.html"><i class="fas fa-home"></i> الرئيسية</a></li>
+            <li><a href="manga.html"><i class="fas fa-book"></i> المانجا</a></li>
+            <li><a href="novels.html"><i class="fas fa-scroll"></i> الروايات</a></li>
+            <li><a href="library.html"><i class="fas fa-book"></i> مكتبة المانجا</a></li>
+            <li><a href="novel-library.html" class="active"><i class="fas fa-scroll"></i> مكتبة الروايات</a></li>
+            <li><a href="favorites.html"><i class="fas fa-heart"></i> المفضلة</a></li>
+            <li><a href="history.html"><i class="fas fa-history"></i> السجل</a></li>
+        </ul>
+        <div class="navbar-right">
+            <button class="dark-mode-toggle"></button>
+            <button id="logout-button" class="btn btn-sm btn-danger" title="تسجيل الخروج"><i class="fas fa-sign-out-alt"></i></button>
+            <a href="profile.html" class="navbar-user-badge" title="الملف الشخصي">
+                <span id="user-display-name">مستخدم</span>
+                <div class="navbar-user-avatar">US</div>
+            </a>
+        </div>
+    </nav>
+
+    <main class="page-shell">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1><i class="fas fa-scroll"></i> مكتبة الروايات</h1>
+                <p>اكتشف جميع الروايات المتاحة</p>
+            </div>
+        </section>
+
+        <!-- Filters & Search -->
+        <section class="page-card">
+            <div class="filters-header">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="ابحث عن رواية..." class="form-input">
+                    <button id="search-btn" class="btn btn-primary"><i class="fas fa-search"></i></button>
+                </div>
+                <div class="filter-controls">
+                    <select id="sort-select" class="form-select">
+                        <option value="newest">الأحدث</option>
+                        <option value="popular">الأكثر شعبية</option>
+                        <option value="rated">الأعلى تقييمًا</option>
+                        <option value="views">الأكثر مشاهدة</option>
+                        <option value="title">حسب العنوان</option>
+                    </select>
+                    <select id="genre-select" class="form-select">
+                        <option value="">جميع التصنيفات</option>
+                        <option value="رومانسية">رومانسية</option>
+                        <option value="خيال">خيال</option>
+                        <option value="إثارة">إثارة</option>
+                        <option value="تاريخية">تاريخية</option>
+                        <option value="دراما">دراما</option>
+                        <option value="مغامرة">مغامرة</option>
+                        <option value="رعب">رعب</option>
+                        <option value="خيال علمي">خيال علمي</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Count -->
+        <section class="page-card">
+            <div class="results-info">
+                <span id="results-count">0 رواية</span>
+            </div>
+        </section>
+
+        <!-- Novels Grid -->
+        <section class="page-card">
+            <div id="novels-grid" class="manga-grid">
+                <!-- Novels will be loaded here -->
+            </div>
+            <div id="loading-state" class="loading-state" style="display: none;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>جاري تحميل الروايات...</p>
+            </div>
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <i class="fas fa-scroll fa-3x"></i>
+                <p>لا توجد روايات متاحة حاليًا</p>
+            </div>
+        </section>
+
+        <!-- Pagination -->
+        <section class="page-card">
+            <div id="pagination" class="pagination">
+                <!-- Pagination will be generated here -->
+            </div>
+        </section>
+    </main>
+
+    <script src="js/config.js?v=20260404"></script>
+    <script src="js/auth.js?v=20260404"></script>
+    <script src="js/api.js?v=20260404"></script>
+    <script src="js/toast.js?v=20260404"></script>
+    <script src="js/common.js?v=20260404"></script>
+    <script src="js/novel-library.js?v=20260404"></script>
+</body>
+</html>

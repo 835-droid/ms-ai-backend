@@ -5,6 +5,7 @@ import (
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
 	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
 	mangarepo "github.com/835-droid/ms-ai-backend/internal/data/content/manga"
+	novelrepo "github.com/835-droid/ms-ai-backend/internal/data/content/novel"
 	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
 	pginfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 	datauser "github.com/835-droid/ms-ai-backend/internal/data/user"
@@ -95,11 +96,18 @@ func initializeRepositories(cfg *config.Config, log *logger.Logger, m *mongoinfr
 		viewingHistoryRepo = mangarepo.NewMongoViewingHistoryRepository(m, log)
 	}
 
+	// Novel repository - MongoDB only
+	var novelRepo *novelrepo.MongoNovelRepository
+	if m != nil {
+		novelRepo = novelrepo.NewMongoNovelRepository(m)
+	}
+
 	return &RepoBundle{
 		User:           uRepo,
 		Manga:          mangaRepo,
 		FavList:        favListRepo,
 		MangaChapter:   chapterRepo,
 		ViewingHistory: viewingHistoryRepo,
+		Novel:          novelRepo,
 	}
 }

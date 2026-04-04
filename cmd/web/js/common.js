@@ -325,8 +325,8 @@ async function handleDeleteAccount() {
     
     try {
         // Call delete account API
-        await apiFetch('/user/delete-account', {
-            method: 'DELETE'
+        await apiFetch('/auth/delete-account', {
+            method: 'POST'
         });
         
         // Clear local storage and redirect

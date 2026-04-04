@@ -7,7 +7,7 @@ let currentListManga = [];
 // ========== API Helpers ==========
 async function fetchLists() {
     try {
-        const data = await apiFetch('/api/mangas/lists');
+        const data = await apiFetch('/mangas/lists');
         return data.items || [];
     } catch (error) {
         console.error('Failed to fetch lists:', error);
@@ -17,7 +17,7 @@ async function fetchLists() {
 
 async function fetchListItems(listID) {
     try {
-        const data = await apiFetch(`/api/mangas/lists/${encodeURIComponent(listID)}/items`);
+        const data = await apiFetch(`/mangas/lists/${encodeURIComponent(listID)}/items`);
         return data.items || [];
     } catch (error) {
         console.error('Failed to fetch list items:', error);
@@ -27,7 +27,7 @@ async function fetchListItems(listID) {
 
 async function createList(name, description, isPublic) {
     try {
-        const data = await apiFetch('/api/mangas/lists', {
+        const data = await apiFetch('/mangas/lists', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, description, is_public: isPublic })
@@ -41,7 +41,7 @@ async function createList(name, description, isPublic) {
 
 async function updateList(listID, name, description, isPublic) {
     try {
-        const data = await apiFetch(`/api/mangas/lists/${encodeURIComponent(listID)}`, {
+        const data = await apiFetch(`/mangas/lists/${encodeURIComponent(listID)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, description, is_public: isPublic })
@@ -55,7 +55,7 @@ async function updateList(listID, name, description, isPublic) {
 
 async function deleteList(listID) {
     try {
-        await apiFetch(`/api/mangas/lists/${encodeURIComponent(listID)}`, {
+        await apiFetch(`/mangas/lists/${encodeURIComponent(listID)}`, {
             method: 'DELETE'
         });
         return true;
@@ -67,7 +67,7 @@ async function deleteList(listID) {
 
 async function addMangaToList(listID, mangaID, notes = '') {
     try {
-        await apiFetch(`/api/mangas/lists/${encodeURIComponent(listID)}/items`, {
+        await apiFetch(`/mangas/lists/${encodeURIComponent(listID)}/items`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ manga_id: mangaID, notes })
@@ -81,7 +81,7 @@ async function addMangaToList(listID, mangaID, notes = '') {
 
 async function removeMangaFromList(listID, mangaID) {
     try {
-        await apiFetch(`/api/mangas/lists/${encodeURIComponent(listID)}/items/${encodeURIComponent(mangaID)}`, {
+        await apiFetch(`/mangas/lists/${encodeURIComponent(listID)}/items/${encodeURIComponent(mangaID)}`, {
             method: 'DELETE'
         });
         return true;

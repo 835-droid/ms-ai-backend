@@ -7,9 +7,11 @@ import (
 	coreadmin "github.com/835-droid/ms-ai-backend/internal/core/admin"
 	coreauth "github.com/835-droid/ms-ai-backend/internal/core/auth"
 	coremanga "github.com/835-droid/ms-ai-backend/internal/core/content/manga"
+	corenovel "github.com/835-droid/ms-ai-backend/internal/core/content/novel"
 	coreuser "github.com/835-droid/ms-ai-backend/internal/core/user"
 	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
 	"github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
+	"github.com/835-droid/ms-ai-backend/internal/domain/novel"
 	"github.com/835-droid/ms-ai-backend/pkg/config"
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 )
@@ -29,6 +31,7 @@ type RepoBundle struct {
 	FavList        coremanga.FavoriteListRepository
 	MangaChapter   coremanga.MangaChapterRepository
 	ViewingHistory coremanga.ViewingHistoryRepository
+	Novel          novel.NovelRepository
 }
 
 type serviceBundle struct {
@@ -38,6 +41,7 @@ type serviceBundle struct {
 	FavList        coremanga.FavoriteListService
 	Chapter        coremanga.MangaChapterService
 	ViewingHistory coremanga.ViewingHistoryService
+	Novel          corenovel.NovelService
 }
 
 // ----- END OF FILE: backend/MS-AI/internal/container/types.go -----

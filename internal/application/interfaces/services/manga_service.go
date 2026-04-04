@@ -7,6 +7,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Note: Repository interfaces are now defined in the domain layer.
+// Services depend on domain repository interfaces, not application interfaces.
+// This follows Clean Architecture principles where high-level modules define the interfaces.
+
 // MangaService defines the manga business logic operations.
 type MangaService interface {
 	// Manga CRUD operations

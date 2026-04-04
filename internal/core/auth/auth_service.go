@@ -35,6 +35,7 @@ type AuthService interface {
 	Logout(ctx context.Context, userID primitive.ObjectID) error
 	CreateInviteCode(ctx context.Context, length int) (*coreuser.InviteCode, error)
 	ChangePassword(ctx context.Context, userID, currentPassword, newPassword string) error
+	DeleteUser(ctx context.Context, userID primitive.ObjectID) error
 }
 
 // DefaultAuthService implements AuthService.
@@ -294,6 +295,23 @@ func (s *DefaultAuthService) CreateInviteCode(ctx context.Context, length int) (
 		return nil, err
 	}
 	return inv, nil
+}
+
+// DeleteUser permanently deletes a user account.
+func (s *DefaultAuthService) DeleteUser(ctx context.Context, userID primitive.ObjectID) error {
+	s.log.Info().Str("userId", userID.Hex()).Msg("deleting user account")
+
+	// Find the user first
+	user, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return corecommon.ErrUserNotFound
+	}
+
+	// Delete the user (this will also cascade delete related data)
+	return s.repo.Delete(ctx, userID)
 }
 
 // --- helpers ---
