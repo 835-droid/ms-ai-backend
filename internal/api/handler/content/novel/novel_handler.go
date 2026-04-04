@@ -3,6 +3,7 @@ package novel
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -67,27 +68,40 @@ type novelRatingRequest struct {
 	Score float64 `json:"score" binding:"required"`
 }
 
-// getCallerInfo extracts user ID and roles from context
-func getCallerInfo(c *gin.Context) (primitive.ObjectID, []string, error) {
-	userID, exists := c.Get("userID")
+// getCallerInfo extracts user ID and roles from context.
+// It returns the user ID as a string (compatible with both MongoDB ObjectID and PostgreSQL UUID),
+// along with the user's roles.
+func getCallerInfo(c *gin.Context) (userID string, roles []string, err error) {
+	uid, exists := c.Get("user_id")
 	if !exists {
-		return primitive.NilObjectID, nil, errors.New("user not authenticated")
+		return "", nil, errors.New("user not authenticated")
 	}
 
-	userIDStr, ok := userID.(string)
+	userID, ok = uid.(string)
 	if !ok {
-		return primitive.NilObjectID, nil, errors.New("invalid user ID")
+		return "", nil, errors.New("invalid user ID")
 	}
 
-	oid, err := primitive.ObjectIDFromHex(userIDStr)
+	r, _ := c.Get("user_roles")
+	roles, _ = r.([]string)
+
+	return userID, roles, nil
+}
+
+// getCallerObjectID extracts user ID as MongoDB ObjectID from context.
+// Returns error if the user ID is not a valid MongoDB ObjectID.
+func getCallerObjectID(c *gin.Context) (primitive.ObjectID, []string, error) {
+	userIDStr, roles, err := getCallerInfo(c)
 	if err != nil {
 		return primitive.NilObjectID, nil, err
 	}
 
-	roles, _ := c.Get("roles")
-	roleSlice, _ := roles.([]string)
+	oid, err := primitive.ObjectIDFromHex(userIDStr)
+	if err != nil {
+		return primitive.NilObjectID, nil, fmt.Errorf("invalid MongoDB ObjectID: %w", err)
+	}
 
-	return oid, roleSlice, nil
+	return oid, roles, nil
 }
 
 // CreateNovel handles the creation of a new novel.
@@ -114,7 +128,7 @@ func (h *NovelHandler) CreateNovel(c *gin.Context) {
 		return
 	}
 
-	authorID, _, err := getCallerInfo(c)
+	authorID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -275,7 +289,7 @@ func (h *NovelHandler) UpdateNovel(c *gin.Context) {
 	}
 	n.CoverImage = req.CoverImage
 
-	callerID, roles, err := getCallerInfo(c)
+	callerID, roles, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -316,7 +330,7 @@ func (h *NovelHandler) DeleteNovel(c *gin.Context) {
 		return
 	}
 
-	callerID, roles, err := getCallerInfo(c)
+	callerID, roles, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -461,7 +475,7 @@ func (h *NovelHandler) RateNovel(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return

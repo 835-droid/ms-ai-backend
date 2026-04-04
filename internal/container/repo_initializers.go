@@ -9,6 +9,7 @@ import (
 	mongoinfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/mongo"
 	pginfra "github.com/835-droid/ms-ai-backend/internal/data/infrastructure/postgres"
 	datauser "github.com/835-droid/ms-ai-backend/internal/data/user"
+	noveldom "github.com/835-droid/ms-ai-backend/internal/domain/novel"
 	"github.com/835-droid/ms-ai-backend/pkg/config"
 	"github.com/835-droid/ms-ai-backend/pkg/logger"
 )
@@ -96,10 +97,24 @@ func initializeRepositories(cfg *config.Config, log *logger.Logger, m *mongoinfr
 		viewingHistoryRepo = mangarepo.NewMongoViewingHistoryRepository(m, log)
 	}
 
-	// Novel repository - MongoDB only
-	var novelRepo *novelrepo.MongoNovelRepository
-	if m != nil {
-		novelRepo = novelrepo.NewMongoNovelRepository(m)
+	// Novel repository - support both MongoDB and PostgreSQL
+	var novelRepo noveldom.NovelRepository
+	switch cfg.DBType {
+	case "postgres":
+		if p != nil {
+			novelRepo = novelrepo.NewPostgresNovelRepository(p)
+		}
+	case "hybrid":
+		// In hybrid mode, prefer PostgreSQL for novels if available
+		if p != nil {
+			novelRepo = novelrepo.NewPostgresNovelRepository(p)
+		} else if m != nil {
+			novelRepo = novelrepo.NewMongoNovelRepository(m)
+		}
+	default: // mongo
+		if m != nil {
+			novelRepo = novelrepo.NewMongoNovelRepository(m)
+		}
 	}
 
 	return &RepoBundle{

@@ -47,7 +47,7 @@ func (h *NovelHandler) SetReaction(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -80,7 +80,7 @@ func (h *NovelHandler) GetUserReaction(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -103,7 +103,7 @@ func (h *NovelHandler) AddFavorite(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -125,7 +125,7 @@ func (h *NovelHandler) RemoveFavorite(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -147,7 +147,7 @@ func (h *NovelHandler) IsFavorite(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -164,7 +164,7 @@ func (h *NovelHandler) IsFavorite(c *gin.Context) {
 
 // ListFavorites retrieves a user's favorite novels.
 func (h *NovelHandler) ListFavorites(c *gin.Context) {
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -196,7 +196,7 @@ func (h *NovelHandler) AddNovelComment(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
@@ -271,7 +271,7 @@ func (h *NovelHandler) DeleteNovelComment(c *gin.Context) {
 		return
 	}
 
-	userID, _, err := getCallerInfo(c)
+	userID, _, err := getCallerObjectID(c)
 	if err != nil {
 		response.Unauthorized(c, "unauthorized")
 		return
